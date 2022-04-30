@@ -339,6 +339,10 @@ void funcTagsView()
         }
 
         thePlugin.SendNppMsg( uMsg, 0, (LPARAM) dockData.hClient );
+        if ( uMsg == NPPM_DMMSHOW )
+        {
+            thePlugin.GetTagsDlg().ApplyColors();
+        }
     }
     else
     {
@@ -365,6 +369,12 @@ void funcSettings()
 
     CSettingsDlg dlg(thePlugin.GetTagsDlg().GetOptions());
     dlg.DoModal(thePlugin.ewGetMainHwnd());
+
+    if ( thePlugin.GetTagsDlg().GetHwnd() &&
+         thePlugin.GetTagsDlg().IsWindowVisible() )
+    {
+        thePlugin.GetTagsDlg().ApplyColors();
+    }
 }
 
 // static func
@@ -392,14 +402,11 @@ void funcAbout()
         {
             if ( wParam == IDM_LANGSTYLE_CONFIG_DLG )
             {
-                if ( thePlugin.GetTagsDlg().GetOptions().getBool(CTagsDlg::OPT_COLORS_USEEDITORCOLORS) )
-                {
-                    LRESULT nResult = ::CallWindowProcW(nppOriginalWndProc, hWnd, uMessage, wParam, lParam);
+                LRESULT nResult = ::CallWindowProcW(nppOriginalWndProc, hWnd, uMessage, wParam, lParam);
 
-                    thePlugin.GetTagsDlg().applyEditorColors();
+                thePlugin.GetTagsDlg().ApplyColors();
 
-                    return nResult;
-                }
+                return nResult;
             }
         }
 

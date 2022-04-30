@@ -230,7 +230,7 @@ class CTagsDlg : public CDialog
 
         HINSTANCE GetInstDll() { return m_hInstDll; }
 
-        void applyEditorColors();
+        void ApplyColors();
 
     protected:
         virtual INT_PTR DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;

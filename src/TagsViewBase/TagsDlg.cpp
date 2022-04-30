@@ -157,10 +157,7 @@ LRESULT CTagsFilterEdit::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         /*
         if ( uMsg == WM_PAINT )
         {
-            if ( m_pDlg->GetOptions().getBool(CTagsDlg::OPT_COLORS_USEEDITORCOLORS) )
-            {
-                m_pDlg->applyEditorColors();
-            }
+            m_pDlg->ApplyColors();
         }
         */
     }
@@ -269,10 +266,7 @@ If using the TTN_NEEDTEXT message handler and one wants to display tooltip longe
         /*
         else if ( uMsg == WM_PAINT )
         {
-            if ( m_pDlg->GetOptions().getBool(CTagsDlg::OPT_COLORS_USEEDITORCOLORS) )
-            {
-                m_pDlg->applyEditorColors();
-            }
+            m_pDlg->ApplyColors();
         }
         */
         else if ( uMsg == WM_SETFOCUS )
@@ -373,10 +367,7 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         /*
         else if ( uMsg == WM_PAINT )
         {
-            if ( m_pDlg->GetOptions().getBool(CTagsDlg::OPT_COLORS_USEEDITORCOLORS) )
-            {
-                m_pDlg->applyEditorColors();
-            }
+            m_pDlg->ApplyColors();
         }
         */
     }
@@ -709,10 +700,7 @@ BOOL CTagsDlg::OnInitDialog()
     //m_tbButtons.SetButtonState(IDM_PREVPOS, 0);
     //m_tbButtons.SetButtonState(IDM_NEXTPOS, 0);
 
-    if ( m_opt.getBool(OPT_COLORS_USEEDITORCOLORS) )
-    {
-        applyEditorColors();
-    }
+    ApplyColors();
 
     initTooltips();
 
@@ -1439,47 +1427,52 @@ HTREEITEM CTagsDlg::addTreeViewItem(HTREEITEM hParent, const CTagsResultParser::
     return m_tvTags.InsertItem(tvis);
 }
 
-void CTagsDlg::applyEditorColors()
+void CTagsDlg::ApplyColors()
 {
-    if ( m_pEdWr )
+    bool bApplyEditorColors = false;
+    bool bColorChanged = false;
+    IEditorWrapper::sEditorColors colors;
+
+    if ( m_opt.getBool(CTagsDlg::OPT_COLORS_USEEDITORCOLORS) &&
+         m_pEdWr && m_pEdWr->ewGetEditorColors(colors) )
     {
-        IEditorWrapper::sEditorColors colors;
+        bApplyEditorColors = true;
+    }
+    else
+    {
+        colors.crTextColor = ::GetSysColor(COLOR_WINDOWTEXT);
+        colors.crBkgndColor = ::GetSysColor(COLOR_WINDOW);
+    }
 
-        if ( m_pEdWr->ewGetEditorColors(colors) )
+    if ( m_crBkgndColor != colors.crBkgndColor )
+    {
+        m_lvTags.SetTextBkColor(colors.crBkgndColor);
+        m_lvTags.SetBkColor(colors.crBkgndColor);
+        m_tvTags.SetBkColor(colors.crBkgndColor);
+
+        m_crBkgndColor = colors.crBkgndColor;
+        if ( m_hBkgndBrush != NULL )
         {
-            bool bColorChanged = false;
-
-            if ( m_crBkgndColor != colors.crBkgndColor )
-            {
-                m_lvTags.SetTextBkColor(colors.crBkgndColor);
-                m_lvTags.SetBkColor(colors.crBkgndColor);
-                m_tvTags.SetBkColor(colors.crBkgndColor);
-
-                m_crBkgndColor = colors.crBkgndColor;
-                if ( m_hBkgndBrush != NULL )
-                {
-                    ::DeleteObject(m_hBkgndBrush);
-                }
-                m_hBkgndBrush = ::CreateSolidBrush(colors.crBkgndColor);
-                bColorChanged = true;
-            }
-
-            if ( m_crTextColor != colors.crTextColor )
-            {
-                m_lvTags.SetTextColor(colors.crTextColor);
-                m_tvTags.SetTextColor(colors.crTextColor);
-
-                m_crTextColor = colors.crTextColor;
-                bColorChanged = true;
-            }
-
-            if ( bColorChanged )
-            {
-                m_edFilter.Invalidate(TRUE);
-                m_lvTags.Invalidate(TRUE);
-                m_tvTags.Invalidate(TRUE);
-            }
+            ::DeleteObject(m_hBkgndBrush);
         }
+        m_hBkgndBrush = ::CreateSolidBrush(colors.crBkgndColor);
+        bColorChanged = true;
+    }
+
+    if ( m_crTextColor != colors.crTextColor )
+    {
+        m_lvTags.SetTextColor(colors.crTextColor);
+        m_tvTags.SetTextColor(colors.crTextColor);
+
+        m_crTextColor = colors.crTextColor;
+        bColorChanged = true;
+    }
+
+    if ( bColorChanged )
+    {
+        m_edFilter.Invalidate(TRUE);
+        m_lvTags.Invalidate(TRUE);
+        m_tvTags.Invalidate(TRUE);
     }
 }
 

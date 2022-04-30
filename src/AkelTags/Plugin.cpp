@@ -775,6 +775,12 @@ extern "C" void __declspec(dllexport) Settings(PLUGINDATA *pd)
     CSettingsDlg dlg(thePlugin.GetTagsDlg().GetOptions());
     dlg.DoModal(thePlugin.ewGetMainHwnd());
 
+    if ( thePlugin.GetTagsDlg().GetHwnd() &&
+         thePlugin.GetTagsDlg().IsWindowVisible() )
+    {
+        thePlugin.GetTagsDlg().ApplyColors();
+    }
+
     // Stay in memory, and show as active
     pd->nUnload = UD_NONUNLOAD_NONACTIVE;
 }
@@ -837,10 +843,7 @@ LRESULT CALLBACK NewEditProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         }
         case WM_PAINT:
         {
-            if ( thePlugin.GetTagsDlg().GetOptions().getBool(CTagsDlg::OPT_COLORS_USEEDITORCOLORS) )
-            {
-                thePlugin.GetTagsDlg().applyEditorColors();
-            }
+            thePlugin.GetTagsDlg().ApplyColors();
             break;
         }
         default:
