@@ -480,6 +480,11 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification * pscn)
         {
             case SCN_PAINTED:
                 thePlugin.ewOnSelectionChanged();
+                if ( thePlugin.GetTagsDlg().GetHwnd() &&
+                     thePlugin.GetTagsDlg().IsWindowVisible() )
+                {
+                    thePlugin.GetTagsDlg().ApplyColors();
+                }
                 break;
         }
     }
