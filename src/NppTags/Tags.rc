@@ -1,0 +1,95 @@
+#include <windows.h>
+#include <commctrl.h>
+#include <richedit.h>
+#include "../TagsViewBase/resource.h"
+
+
+IDI_TAGSVIEW       ICON DISCARDABLE "..\\TagsViewBase\\res\\TagsView.ico"
+IDB_TAGSVIEW       BITMAP         "..\\TagsViewBase\\res\\TagsView.bmp"
+
+//
+// Bitmap resources
+//
+IDB_CANCEL         BITMAP         "..\\TagsViewBase\\res\\TagsView_Close.bmp"
+
+
+IDB_EDITSPY        BITMAP         "..\\TagsViewBase\\res\\TagsView_Find.bmp"
+
+
+IDB_TOOLBAR        BITMAP         "..\\TagsViewBase\\res\\TagsView_Toolbar.bmp"
+
+
+
+//
+// Dialog resources
+//
+IDD_MAIN DIALOGEX 0, 0, 192, 199
+STYLE DS_3DLOOK | DS_SHELLFONT | WS_BORDER | WS_CAPTION | WS_DLGFRAME | WS_POPUP | WS_THICKFRAME | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW
+CAPTION "TagsView"
+FONT 8, "Ms Shell Dlg", 0, 0, 1
+{
+    EDITTEXT        IDC_ED_FILTER, 2, 24, 188, 14, ES_AUTOHSCROLL
+    CONTROL         "", IDC_TV_TAGS, WC_TREEVIEW, WS_TABSTOP | WS_BORDER | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_INFOTIP, 2, 44, 188, 154
+    CONTROL         "", IDC_LV_TAGS, WC_LISTVIEW, WS_TABSTOP | WS_BORDER | LVS_ALIGNLEFT | LVS_SHOWSELALWAYS | LVS_SINGLESEL | LVS_REPORT, 2, 44, 188, 154
+}
+
+
+IDD_SETTINGS DIALOG 0, 0, 186, 95
+STYLE DS_3DLOOK | DS_CENTER | DS_MODALFRAME | DS_SHELLFONT | WS_CAPTION | WS_VISIBLE | WS_POPUP | WS_SYSMENU
+CAPTION "TagsView Settings"
+FONT 8, "Ms Shell Dlg"
+{
+    DEFPUSHBUTTON   "OK", IDOK, 35, 75, 50, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "Cancel", IDCANCEL, 95, 75, 50, 14, 0, WS_EX_LEFT
+    AUTOCHECKBOX    "Parse on save (auto-parse file when it is saved)", IDC_CH_OPT_PARSEONSAVE, 5, 10, 175, 8, 0, WS_EX_LEFT
+    AUTOCHECKBOX    "Use Editor colors", IDC_CH_OPT_EDITORCOLORS, 5, 24, 175, 8, 0, WS_EX_LEFT
+}
+
+
+
+//
+// String Table resources
+//
+STRINGTABLE
+{
+    IDM_PREVPOS                   "Navigate Backward"
+    IDM_NEXTPOS                   "Navigate Forward"
+    IDM_SORTLINE                  "Sort by Line"
+    IDM_SORTNAME                  "Sort by Name"
+    IDM_VIEWLIST                  "View as List"
+    IDM_VIEWTREE                  "View as Tree"
+    IDM_PARSE                     "Parse"
+    IDM_CLOSE                     "Close"
+}
+
+
+
+//
+// Version Information resources
+//
+1 VERSIONINFO
+    FILEVERSION     PLUGIN_VERSION
+    PRODUCTVERSION  PLUGIN_VERSION
+    FILEOS          VOS__WINDOWS32
+    FILETYPE        VFT_UNKNOWN
+{
+    BLOCK "StringFileInfo"
+    {
+        BLOCK "040904E4"
+        {
+            VALUE "FileDescription", PLUGIN_NAME " for Notepad++"
+            VALUE "FileVersion", STR(PLUGIN_VERSION)
+            VALUE "InternalName", PLUGIN_NAME
+            VALUE "OriginalFilename", PLUGIN_NAME ".dll"
+            VALUE "ProductName", PLUGIN_NAME " for Notepad++"
+            VALUE "ProductVersion", STR(PLUGIN_VERSION)
+            VALUE "LegalCopyright", PLUGIN_COPYRIGHT
+            VALUE "Comments", PLUGIN_COMMENTS
+        }
+    }
+    BLOCK "VarFileInfo"
+    {
+        VALUE "Translation", 0x0, 1252 // language neutral - multilingual
+    }
+}

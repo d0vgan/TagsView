@@ -1,0 +1,97 @@
+Exuberant Ctags 5.8, Copyright (C) 1996-2009 Darren Hiebert
+  Compiled: Jul  9 2009, 17:05:35
+  Addresses: <dhiebert@users.sourceforge.net>, http://ctags.sourceforge.net
+  Optional compiled features: +win32, +regex, +internal-sort
+
+Usage: ctags.exe [options] [file(s)]
+
+  -a   Append the tags to an existing tag file.
+  -B   Use backward searching patterns (?...?).
+  -e   Output tag file for use with Emacs.
+  -f <name>
+       Write tags to specified file. Value of "-" writes tags to stdout
+       ["tags"; or "TAGS" when -e supplied].
+  -F   Use forward searching patterns (/.../) (default).
+  -h <list>
+       Specify list of file extensions to be treated as include files.
+       [".h.H.hh.hpp.hxx.h++"].
+  -I <list|@file>
+       A list of tokens to be specially handled is read from either the
+       command line or the specified file.
+  -L <file>
+       A list of source file names are read from the specified file.
+       If specified as "-", then standard input is read.
+  -n   Equivalent to --excmd=number.
+  -N   Equivalent to --excmd=pattern.
+  -o   Alternative for -f.
+  -R   Equivalent to --recurse.
+  -u   Equivalent to --sort=no.
+  -V   Equivalent to --verbose.
+  -x   Print a tabular cross reference file to standard output.
+  --append=[yes|no]
+       Should tags should be appended to existing tag file [no]?
+  --etags-include=file
+      Include reference to 'file' in Emacs-style tag file (requires -e).
+  --exclude=pattern
+      Exclude files and directories matching 'pattern'.
+  --excmd=number|pattern|mix
+       Uses the specified type of EX command to locate tags [mix].
+  --extra=[+|-]flags
+      Include extra tag entries for selected information (flags: "fq").
+  --fields=[+|-]flags
+      Include selected extension fields (flags: "afmikKlnsStz") [fks].
+  --file-scope=[yes|no]
+       Should tags scoped only for a single file (e.g. "static" tags
+       be included in the output [yes]?
+  --filter=[yes|no]
+       Behave as a filter, reading file names from standard input and
+       writing tags to standard output [no].
+  --filter-terminator=string
+       Specify string to print to stdout following the tags for each file
+       parsed when --filter is enabled.
+  --format=level
+       Force output of specified tag file format [2].
+  --help
+       Print this option summary.
+  --if0=[yes|no]
+       Should C code within #if 0 conditional branches be parsed [no]?
+  --<LANG>-kinds=[+|-]kinds
+       Enable/disable tag kinds for language <LANG>.
+  --langdef=name
+       Define a new language to be parsed with regular expressions.
+  --langmap=map(s)
+       Override default mapping of language to source file extension.
+  --language-force=language
+       Force all files to be interpreted using specified language.
+  --languages=[+|-]list
+       Restrict files scanned for tags to those mapped to langauges
+       specified in the comma-separated 'list'. The list can contain any
+       built-in or user-defined language [all].
+  --license
+       Print details of software license.
+  --line-directives=[yes|no]
+       Should #line directives be processed [no]?
+  --links=[yes|no]
+       Indicate whether symbolic links should be followed [yes].
+  --list-kinds=[language|all]
+       Output a list of all tag kinds for specified language or all.
+  --list-languages
+       Output list of supported languages.
+  --list-maps=[language|all]
+       Output list of language mappings.
+  --options=file
+       Specify file from which command line options should be read.
+  --recurse=[yes|no]
+       Recurse into directories supplied on command line [no].
+  --regex-<LANG>=/line_pattern/name_pattern/[flags]
+       Define regular expression for locating tags in specific language.
+  --sort=[yes|no|foldcase]
+       Should tags be sorted (optionally ignoring case) [yes]?.
+  --tag-relative=[yes|no]
+       Should paths be relative to location of tag file [no; yes when -e]?
+  --totals=[yes|no]
+       Print statistics about source and tag files [no].
+  --verbose=[yes|no]
+       Enable verbose messages describing actions on each source file.
+  --version
+       Print version identifier to standard output.
