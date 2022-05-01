@@ -1,12 +1,14 @@
 0.5 beta
 --------
 + back again!
-+ updated to AkelPad 4.9.8+ and Notepad++ 8.3+
 + 32-bit and 64-bit versions
++ updated to AkelPad 4.9.8+ and Notepad++ 8.3+
++ applying editor's colors
 + settings dialog
 + win32++ updated to 8.9.1+
 + uses the latest ctags from https://github.com/universal-ctags/ctags-win32
 + a lot of internal improvements
+* Glory to Ukraine! Glory to the heroes!
 
 
 0.4 beta
