@@ -195,11 +195,14 @@ void CTagsResultParser::Parse(const char* s, tags_map& m)
                 {
                     tagData.end_line = atoi(p + 5);
 
-                    if ( s < p )
+                    if ( (s < p) && 
+                         (strncmp(s, "typeref:", 8) != 0) &&
+                         (strncmp(s, "file:", 8) != 0) )
                     {
                         // additional "scope" tag
-                        const char* sp = strchr_pn(s, ':', pn); // e.g. exclude "class:" from "class:ClassName"
-                        if ( sp == pn )
+                        const char* pp = strchr_pn(s, '\t', p); // stop at the nearest '\t'
+                        const char* sp = strchr_pn(s, ':', pp); // e.g. exclude "class:" from "class:ClassName"
+                        if ( sp == pp )
                         {
                             sp = s;
                         }
@@ -207,7 +210,6 @@ void CTagsResultParser::Parse(const char* s, tags_map& m)
                         {
                             ++sp;
                         }
-                        const char* pp = strchr_pn(sp, '\t', p); // stop at the nearest '\t'
                         tagData.tagScope.assign( sp, static_cast<size_t>(pp - sp) );
                     }
                 }
