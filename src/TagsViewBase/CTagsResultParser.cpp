@@ -1,6 +1,35 @@
 #include "CTagsResultParser.h"
 #include <string.h>
 
+namespace
+{
+    // searching for c in [s .. pn)
+    const char* strchr_pn(const char* s, char c, const char* pn)
+    {
+        while ( s < pn && *s != c )
+        {
+            ++s;
+        }
+        return s;
+    }
+
+    // searching for sub in [s .. pn)
+    const char* strstr_pn(const char* s, const char* sub, const char* pn)
+    {
+        int n = strlen(sub);
+        const char* sn = pn - n;
+        while ( s < sn && strncmp(s, sub, n) != 0 )
+        {
+            ++s;
+        }
+        if ( s >= sn )
+        {
+            s = pn;
+        }
+        return s;
+    }
+}
+
 void CTagsResultParser::DelDupSpaces(string& s)
 {
     string::size_type pos = 0;
@@ -32,193 +61,174 @@ void CTagsResultParser::DelDupSpaces(string& s)
     }
 }
 
-// parses result of "ctags --fields=fKnst"
-void CTagsResultParser::Parse(const string& s, multimap<int, tTagData>& m)
+// parses result of "ctags --fields=fKnste"
+void CTagsResultParser::Parse(const char* s, tags_map& m)
 {
-    enum eParsedState {
-        EPS_NEWLINE = 0,
-        EPS_TAGNAME,
+    m.clear();
+
+    enum eParseState {
+        EPS_TAGNAME = 0,
+        EPS_TAGFILEPATH,
         EPS_TAGPATTERN,
         EPS_TAGTYPE,
         EPS_TAGLINE,
-
-        EPS_ALL = EPS_TAGLINE
+        EPS_TAGENDLINE
     };
 
+    unsigned char uParseState = EPS_TAGNAME;
+    const char* p;
+    const char* pn; // pos of the nearest '\n'
     tTagData tagData;
-    unsigned char uParsedState = EPS_NEWLINE;
-    string::size_type pos = 0;
-    string::size_type pos0 = 0;
-    string::size_type pos1 = 0;
-    multimap<int, tTagData>::iterator itr;
+    tags_map::iterator itr;
 
-    m.clear();
-
-    while ( pos != string::npos )
+    while ( s != NULL && *s != 0 )
     {
-        pos0 = pos;
-
-        switch ( uParsedState )
+        switch ( uParseState )
         {
-            case EPS_NEWLINE:
+            case EPS_TAGNAME:
+                tagData.tagScope.clear();
+                tagData.line = -1;
+                tagData.end_line = -1;
                 tagData.data.p = (void *) 0;
                 tagData.pTagData = (void *) 0;
-                tagData.tagScope.clear();
-                if ( s[pos] == '!' )
+
+                pn = strchr(s, '\n');
+                if ( pn == NULL )
                 {
-                    // comment: skip it
-                    ++pos;
-                    pos = s.find( '\n', pos );
+                    pn = s + strlen(s) + 1;
+                }
+                if ( *s == '!' )
+                {
+                    p = pn; // comment: skip it
+                    uParseState = EPS_TAGNAME;
                 }
                 else
                 {
-                    pos = s.find( '\t', pos );
-                    if ( pos != string::npos )
+                    p = strchr_pn(s, '\t', pn);
+                    if ( p < pn )
                     {
-                        tagData.tagName.assign( s.c_str() + pos0, pos - pos0 );
-                        ++pos;
-                        uParsedState = EPS_TAGNAME;
+                        tagData.tagName.assign( s, static_cast<size_t>(p - s) );
+                        uParseState = EPS_TAGFILEPATH;
+                    }
+                    else
+                    {
+                        uParseState = EPS_TAGNAME;
                     }
                 }
                 break;
 
-            case EPS_TAGNAME:
-                pos = s.find( '\t', pos );
-                if ( pos != string::npos )
+            case EPS_TAGFILEPATH:
+                p = strchr_pn(s, '\t', pn); // skip file path
+                if ( p < pn )
                 {
-                    ++pos; // skip position of File Name
-                    pos0 = pos;
-                    pos = s.find( ";\"\t", pos );
-                    if ( pos != string::npos )
-                    {
-                        if ( s[pos0] == '/' )
-                        {
-                            ++pos0;
-                            if ( s[pos0] == '^' )
-                                ++pos0;
-                        }
-                        tagData.tagPattern.assign( s.c_str() + pos0, pos - pos0 );
-                        string::size_type uLen = tagData.tagPattern.length();
-                        if ( uLen >= 0 )
-                        {
-                            if ( tagData.tagPattern[uLen - 1] == '/' )
-                            {
-                                if ( (uLen > 1) && (tagData.tagPattern[uLen - 2] == '$') )
-                                {
-                                    tagData.tagPattern.erase(uLen - 2, 2);
-                                }
-                                else
-                                    tagData.tagPattern.erase(uLen - 1, 1);
-                            }
-                        }
-                        pos += 3; // ";\"\t"
-                        uParsedState = EPS_TAGPATTERN;
-                    }
+                    uParseState = EPS_TAGPATTERN;
+                }
+                else
+                {
+                    uParseState = EPS_TAGNAME;
                 }
                 break;
 
             case EPS_TAGPATTERN:
-                pos = s.find( '\t', pos );
-                if ( pos != string::npos )
+                if ( *s == '/' )
                 {
-                    tagData.tagType.assign( s.c_str() + pos0, pos - pos0 );
-                    ++pos;
-                    uParsedState = EPS_TAGTYPE;
+                    ++s;
+                    if ( *s == '^' )
+                        ++s;
+                }
+                p = strstr_pn(s, ";\"\t", pn);
+                if ( p < pn )
+                {
+                    const char* pp = p;
+                    if ( *(pp - 1) == '/' )
+                    {
+                        --pp;
+                        if ( *(pp - 1) == '$' )
+                            --pp;
+                    }
+                    tagData.tagPattern.assign( s, static_cast<size_t>(pp - s) );
+
+                    p += 2; // '\t' in ";\"\t"
+                    uParseState = EPS_TAGTYPE;
+                }
+                else
+                {
+                    uParseState = EPS_TAGNAME;
                 }
                 break;
 
             case EPS_TAGTYPE:
-                pos = s.find( "line:", pos );
-                if ( pos == pos0 )
+                p = strchr_pn(s, '\t', pn);
+                if ( p < pn )
                 {
-                    tagData.line = atoi( s.c_str() + pos + 5 );
-                    pos += 5; // "line:"
-                    uParsedState = EPS_TAGLINE;
+                    tagData.tagType.assign( s, static_cast<size_t>(p - s) );
+                    uParseState = EPS_TAGLINE;
+                }
+                else
+                {
+                    uParseState = EPS_TAGNAME;
                 }
                 break;
 
             case EPS_TAGLINE:
-                pos1 = s.find( "\tend:", pos );
-                if ( pos1 != string::npos )
+                if ( strncmp(s, "line:", 5) == 0 )
                 {
-                    tagData.end_line = atoi( s.c_str() + pos1 + 5 );
-                    ++pos1;
+                    tagData.line = atoi(s + 5);
+                    tagData.end_line = tagData.line;
+                    p = strchr_pn(s + 5, '\t', pn);
+                    if ( p == pn )
+                    {
+                        p = s + 5;
+                    }
+                    uParseState = EPS_TAGENDLINE;
                 }
                 else
                 {
-                    tagData.end_line = -1;
-                    pos1 = s.find( '\n', pos );
-                    if ( pos1 != string::npos )
-                    {
-                        ++pos1;
-                    }
+                    p = pn;
+                    uParseState = EPS_TAGNAME;
                 }
-                pos0 = s.find( '\t', pos0 );
-                if ( pos0 != string::npos )
+                break;
+
+            case EPS_TAGENDLINE:
+                p = strstr_pn(s - 1, "\tend:", pn);
+                if ( p < pn )
                 {
-                    if ( (pos1 == string::npos) || (pos0 < pos1) )
+                    tagData.end_line = atoi(p + 5);
+
+                    if ( s < p )
                     {
                         // additional "scope" tag
-                        const string::size_type len = (pos1 == string::npos) ? s.length() : pos1;
-                        string::size_type i;
-
-                        for ( i = pos0; i < len; i++ )
+                        const char* sp = strchr_pn(s, ':', pn); // e.g. exclude "class:" from "class:ClassName"
+                        if ( sp == pn )
                         {
-                            if ( s[i] == ':' )
-                            {
-                                // exclude "class:" from "class:ClassName"
-                                if ( (i == len - 1) || (s[i + 1] != ':') )
-                                {
-                                    pos0 = i;
-                                }
-                                break;
-                            }
+                            sp = s;
                         }
-
-                        ++pos0;
-
-                        for ( i = pos0; i < len; i++ )
+                        else
                         {
-                            if ( s[i] == '\t' )
-                            {
-                                break;
-                            }
+                            ++sp;
                         }
-                        if ( (i == len) && (i > 0) && (s[i-1] == '\n') )
-                        {
-                            i = len - 1; // position of '\n'
-                            if ( (i > 0) && (s[i-1] == '\r') )  --i;
-                        }
-                        i -= pos0;
-
-                        if ( i > 0 )
-                        {
-                            tagData.tagScope.assign( s.c_str() + pos0, i );
-                            DelDupSpaces(tagData.tagScope);
-                        }
+                        const char* pp = strchr_pn(sp, '\t', p); // stop at the nearest '\t'
+                        tagData.tagScope.assign( sp, static_cast<size_t>(pp - sp) );
                     }
                 }
+
                 DelDupSpaces(tagData.tagName);
                 DelDupSpaces(tagData.tagPattern);
-                pos0 = tagData.tagPattern.find("\\/");
-                while ( pos0 != string::npos )
-                {
-                    tagData.tagPattern.erase(pos0, 1);
-                    pos0 = tagData.tagPattern.find("\\/", pos0);
-                }
+
                 itr = m.insert( std::make_pair(tagData.line, tagData) );
                 if ( itr != m.end() )
                 {
                     itr->second.pTagData = (void *) &(itr->second);
                 }
-                uParsedState = EPS_NEWLINE;
-                pos = s.find( '\n', pos );
-                if ( pos != string::npos )
-                {
-                    ++pos;
-                }
+
+                p = pn;
+                uParseState = EPS_TAGNAME;
                 break;
         }
+
+        s = p;
+        if ( s != NULL )
+            ++s;
     }
 }
 

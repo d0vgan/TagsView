@@ -460,7 +460,7 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
     CConsoleOutputRedirector cor;
     CProcess proc;
     tCTagsThreadParam* tt = (tCTagsThreadParam *) lpParam;
-    std::basic_string<char> temp_output_tags;
+    char* pTempTags = NULL;
 
     if ( tt->pDlg->GetHwnd() )
     {
@@ -483,14 +483,17 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
                 DWORD dwSize = 0;
                 DWORD dwSizeLow = ::GetFileSize(hFile, &dwSize);
 
-                char* pBuf = new char[dwSizeLow];
                 dwSize = 0;
-                if ( ::ReadFile(hFile, pBuf, dwSizeLow, &dwSize, NULL) )
+                pTempTags = new char[dwSizeLow + 1];
+                if ( ::ReadFile(hFile, pTempTags, dwSizeLow, &dwSize, NULL) && (dwSizeLow == dwSize) )
                 {
-                    if ( dwSizeLow == dwSize )
-                        temp_output_tags.append(pBuf, dwSizeLow);
+                    pTempTags[dwSizeLow] = 0;
                 }
-                delete [] pBuf;
+                else
+                {
+                    delete [] pTempTags;
+                    pTempTags = NULL;
+                }
 
                 ::CloseHandle(hFile);
             }
@@ -509,8 +512,13 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
                 const CEditorWrapper* pEdWr = tt->pDlg->m_pEdWr;
                 if ( pEdWr && (pEdWr->ewGetFilePathName() == tt->source_file_name) )
                 {
-                    const auto& tags = tt->temp_output_file.empty() ? cor.GetOutputString() : temp_output_tags;
-                    tt->pDlg->OnAddTags( tags, tt->isUTF8 );
+                    if ( tt->temp_output_file.empty() )
+                        tt->pDlg->OnAddTags( cor.GetOutputString().c_str(), tt->isUTF8 );
+                    else
+                        tt->pDlg->OnAddTags( pTempTags, tt->isUTF8 );
+
+                    if ( pTempTags != NULL )
+                        delete [] pTempTags;
                 }
             }
         }
@@ -527,7 +535,7 @@ INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
     switch ( uMsg )
     {
         /*case WM_ADDTAGS:
-            OnAddTags( *((const string *) lParam) );
+            OnAddTags( (const char *) lParam) );
             return 0;*/
 
         case WM_UPDATETAGSVIEW:
@@ -571,7 +579,7 @@ void CTagsDlg::EndDialog(INT_PTR nResult)
     }
 }
 
-void CTagsDlg::OnAddTags(const string& s, bool isUTF8)
+void CTagsDlg::OnAddTags(const char* s, bool isUTF8)
 {
     CTagsResultParser::Parse( s, m_tags );
     m_isUTF8tags = isUTF8;
@@ -1065,7 +1073,7 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
                     pUCS2[lenUCS2] = 0;
 
                     int lenUTF8 = ::WideCharToMultiByte(CP_UTF8, 0, pUCS2, lenUCS2, NULL, 0, NULL, NULL);
-                    if ( (lenUTF8 > 0) && (lenUTF8 != lenUCS2) )
+                    if ( lenUTF8 > 0 )
                     {
                         char* pUTF8 = new char[lenUTF8 + 1];
 
@@ -1079,14 +1087,29 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
                         getTempPath(szTempPath);
                         getProcId(szNum);
 
+                        const TCHAR* pszExt = cszFileName + lstrlen(cszFileName);
+                        while ( --pszExt >= cszFileName )
+                        {
+                            if ( *pszExt == _T('.') )
+                                break;
+
+                            if ( *pszExt == _T('\\') || *pszExt == _T('/') )
+                            {
+                                pszExt = NULL;
+                                break;
+                            }
+                        }
+
                         // generating unique temp file name
-                        tt->temp_input_file.clear();
-                        tt->temp_input_file.reserve(128);
-                        tt->temp_input_file += szTempPath;
-                        tt->temp_input_file += tt->pDlg->GetEditorShortName();
-                        tt->temp_input_file += _T("_inp_"); 
-                        tt->temp_input_file += szNum;
-                        tt->temp_input_file += _T(".txt");
+                        auto& temp_file = tt->temp_input_file;
+                        temp_file.clear();
+                        temp_file.reserve(128);
+                        temp_file += szTempPath;
+                        temp_file += tt->pDlg->GetEditorShortName();
+                        temp_file += _T("_inp_"); 
+                        temp_file += szNum;
+                        if ( pszExt != NULL )
+                            temp_file += pszExt; // original file extension
 
                         HANDLE hTempFile = ::CreateFile(tt->temp_input_file.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
                         if ( hTempFile != INVALID_HANDLE_VALUE )
@@ -1117,7 +1140,8 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
                 delete [] pUCS2;
         }
 
-        ::CloseHandle(hFile);
+        if ( hFile != NULL )
+            ::CloseHandle(hFile);
     }
 
     if ( !tt->pDlg->GetOptions().getBool(CTagsDlg::OPT_CTAGS_OUTPUTSTDOUT) )
@@ -1126,13 +1150,14 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
         getProcId(szNum);
 
         // generating unique temp file name
-        tt->temp_output_file.clear();
-        tt->temp_output_file.reserve(128);
-        tt->temp_output_file += szTempPath;
-        tt->temp_output_file += tt->pDlg->GetEditorShortName();
-        tt->temp_output_file += _T("tags_"); 
-        tt->temp_output_file += szNum;
-        tt->temp_output_file += _T(".txt");
+        auto& temp_file = tt->temp_output_file;
+        temp_file.clear();
+        temp_file.reserve(128);
+        temp_file += szTempPath;
+        temp_file += tt->pDlg->GetEditorShortName();
+        temp_file += _T("tags_"); 
+        temp_file += szNum;
+        temp_file += _T(".txt");
     }
 }
 

@@ -242,7 +242,7 @@ class CTagsDlg : public CDialog
         virtual void OnOK() override;
         virtual LRESULT OnNotify(WPARAM wParam, LPARAM lParam) override;
 
-        void OnAddTags(const string& s, bool isUTF8);
+        void OnAddTags(const char* s, bool isUTF8);
         BOOL OnInitDialog();
         void OnSize(bool bInitial = false);
         INT_PTR OnCtlColorEdit(WPARAM wParam, LPARAM lParam);

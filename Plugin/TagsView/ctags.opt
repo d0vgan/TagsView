@@ -1,6 +1,9 @@
 --langdef=ini
---langmap=ini:.ini
---regex-ini=/^[^a-zA-Z1-90\=\_\-\;\:]*[ \t]*(\[.+\])[ \t]*/\1/s,section/
+--map-ini=+.ini
+--kinddef-ini=s,section,sections
+--regex-ini=/^[ \t]*(\[.+\])/\1/s/
+
 --langdef=reg
---langmap=reg:.reg
---regex-reg=/^[^a-zA-Z1-90\=\_\-\;\:]*[ \t]*(\[.+\])[ \t]*/\1/s,section/
+--map-reg=+.reg
+--kinddef-reg=s,section,sections
+--regex-reg=/^[ \t]*(\[.+\])/\1/s/
