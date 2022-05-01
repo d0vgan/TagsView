@@ -17,7 +17,7 @@ namespace
     const char* strstr_pn(const char* s, const char* sub, const char* pn)
     {
         int n = strlen(sub);
-        const char* sn = pn - n;
+        const char* sn = pn + 1 - n;
         while ( s < sn && strncmp(s, sub, n) != 0 )
         {
             ++s;
