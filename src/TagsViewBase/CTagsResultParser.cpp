@@ -197,7 +197,7 @@ void CTagsResultParser::Parse(const char* s, tags_map& m)
 
                     if ( (s < p) && 
                          (strncmp(s, "typeref:", 8) != 0) &&
-                         (strncmp(s, "file:", 8) != 0) )
+                         (strncmp(s, "file:", 5) != 0) )
                     {
                         // additional "scope" tag
                         const char* pp = strchr_pn(s, '\t', p); // stop at the nearest '\t'
