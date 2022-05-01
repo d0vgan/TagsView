@@ -1399,6 +1399,9 @@ void CTagsDlg::UpdateCurrentItem()
                     --itr;
                 }
 
+                // TODO:
+                // if itr->second.tagScope is "X::Y", let's try to search for
+                // an item with tagName=Y and tagScope=X ?
                 for ( auto itr2 = itr; itr2->second.line <= line; --itr2 )
                 {
                     if ( itr2->second.end_line >= line )
@@ -1407,7 +1410,7 @@ void CTagsDlg::UpdateCurrentItem()
                         break;
                     }
 
-                    if ( itr2 == m_tags.begin() )
+                    if ( itr2 == m_tags.begin() || itr2->second.tagScope.empty() )
                         break;
                 }
             }
