@@ -6,6 +6,7 @@ CSettingsDlg::CSettingsDlg(COptionsManager& opt) : CDialog(IDD_SETTINGS)
 , m_opt(opt)
 , m_hChParseOnSave(NULL)
 , m_hCdEditColors(NULL)
+, m_hChCtagsStdout(NULL)
 {
 }
 
@@ -21,7 +22,8 @@ void CSettingsDlg::OnCancel()
 BOOL CSettingsDlg::OnInitDialog()
 {
     m_hChParseOnSave = ::GetDlgItem(GetHwnd(), IDC_CH_OPT_PARSEONSAVE);
-    m_hCdEditColors = ::GetDlgItem(GetHwnd(), IDC_CH_OPT_EDITORCOLORS);
+    m_hCdEditColors =  ::GetDlgItem(GetHwnd(), IDC_CH_OPT_EDITORCOLORS);
+    m_hChCtagsStdout = ::GetDlgItem(GetHwnd(), IDC_CH_OPT_CTAGSSTDOUT);
 
     if ( m_hChParseOnSave )
     {
@@ -41,6 +43,15 @@ BOOL CSettingsDlg::OnInitDialog()
                      );
     }
 
+    if ( m_hChCtagsStdout )
+    {
+        ::SendMessage( m_hChCtagsStdout, 
+            BM_SETCHECK, 
+            m_opt.getBool(CTagsDlg::OPT_CTAGS_OUTPUTSTDOUT) ? BST_CHECKED : BST_UNCHECKED,
+            0
+        );
+    }
+
     return TRUE;
 }
 
@@ -56,6 +67,12 @@ void CSettingsDlg::OnOK()
     {
         LRESULT nResult = ::SendMessage(m_hCdEditColors, BM_GETCHECK, 0, 0);
         m_opt.setBool(CTagsDlg::OPT_COLORS_USEEDITORCOLORS, (nResult == BST_CHECKED));
+    }
+
+    if ( m_hChCtagsStdout )
+    {
+        LRESULT nResult = ::SendMessage(m_hChCtagsStdout, BM_GETCHECK, 0, 0);
+        m_opt.setBool(CTagsDlg::OPT_CTAGS_OUTPUTSTDOUT, (nResult == BST_CHECKED));
     }
 
     EndDialog(IDOK);

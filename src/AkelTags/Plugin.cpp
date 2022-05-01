@@ -276,6 +276,11 @@ LPCTSTR CTagsViewPlugin::ewGetEditorName() const
     return _T("AkelPad");
 }
 
+LPCTSTR CTagsViewPlugin::ewGetEditorShortName() const
+{
+    return _T("akel");
+}
+
 void CTagsViewPlugin::ewDoSaveFile()
 {
     ::SendMessage(m_hMainWnd, WM_COMMAND, IDM_FILE_SAVE, 0);
@@ -528,9 +533,9 @@ void CTagsViewPlugin::Initialize(PLUGINDATA* pd)
 
     if ( uLen > 0 )
     {
-        tString ctagsPath = szCurDir;
-        ctagsPath += _T("\\TagsView\\ctags.exe");
-        m_tagsDlg.SetCTagsPath(ctagsPath);
+        tString ctagsExePath = szCurDir;
+        ctagsExePath += _T("\\TagsView\\ctags.exe");
+        m_tagsDlg.SetCTagsExePath(ctagsExePath);
     }
 
     m_optRdWr.SetMainWnd(m_hMainWnd);

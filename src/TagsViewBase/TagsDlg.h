@@ -127,9 +127,7 @@ class CTagsDlg : public CDialog
         };
 
         enum eOptions {
-            OPT_NONE = 0,
-
-            OPT_VIEW_MODE,
+            OPT_VIEW_MODE = 0,
             OPT_VIEW_SORT,
             OPT_VIEW_WIDTH,
             OPT_VIEW_NAMEWIDTH,
@@ -142,6 +140,8 @@ class CTagsDlg : public CDialog
             //OPT_COLORS_SELN,
 
             OPT_BEHAVIOR_PARSEONSAVE,
+
+            OPT_CTAGS_OUTPUTSTDOUT,
 
             OPT_COUNT
         };
@@ -178,7 +178,9 @@ class CTagsDlg : public CDialog
         void  SetEditorWrapper(CEditorWrapper* pEdWr) { m_pEdWr = pEdWr; }
 
         // MUST be called manually to set required path to ctags.exe
-        void  SetCTagsPath(const tString& ctagsPath = _T("TagsView\\ctags.exe")) { m_ctagsPath = ctagsPath; }
+        void  SetCTagsExePath(const tString& ctagsPath = _T("TagsView\\ctags.exe")) { m_ctagsExeFilePath = ctagsPath; }
+
+        LPCTSTR GetEditorShortName() const;
 
         void  SetFocusTo(eTagsViewFocus tvf = TVF_TAGSVIEW)
         {
@@ -258,7 +260,8 @@ class CTagsDlg : public CDialog
         void sortTagsByName();
         void sortTagsByType();
 
-        void checkCTagsPath();
+        void checkCTagsExePath();
+        void removeCtagsTempOutputFile();
 
         CTagsResultParser::tags_map::iterator getTagByLine(const int line);
         CTagsResultParser::tags_map::iterator getTagByName(const string& tagName);
@@ -284,7 +287,8 @@ class CTagsDlg : public CDialog
         CTagsTreeView   m_tvTags;
         CTagsToolTips   m_ttHints;
         string          m_tagFilter;
-        tString         m_ctagsPath;
+        tString         m_ctagsExeFilePath;
+        tString         m_ctagsTempOutputFilePath;
         CTagsResultParser::tags_map m_tags;
         bool            m_isUTF8tags;
         COptionsManager m_opt;

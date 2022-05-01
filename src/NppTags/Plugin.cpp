@@ -32,6 +32,11 @@ LPCTSTR CTagsViewPlugin::ewGetEditorName() const
     return _T("Notepad++");
 }
 
+LPCTSTR CTagsViewPlugin::ewGetEditorShortName() const
+{
+    return _T("npp");
+}
+
 void CTagsViewPlugin::ewDoSaveFile()
 {
     SendNppMsg(NPPM_SAVECURRENTFILE);
@@ -286,9 +291,9 @@ void CTagsViewPlugin::Initialize(HINSTANCE hInstance)
 
     if ( nDirLen > 0 )
     {
-        tString ctagsPath = szCurDir;
-        ctagsPath += _T("\\TagsView\\ctags.exe");
-        m_tagsDlg.SetCTagsPath(ctagsPath);
+        tString ctagsExePath = szCurDir;
+        ctagsExePath += _T("\\TagsView\\ctags.exe");
+        m_tagsDlg.SetCTagsExePath(ctagsExePath);
     }
 }
 

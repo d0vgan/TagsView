@@ -44,6 +44,7 @@ FONT 8, "Ms Shell Dlg"
     PUSHBUTTON      "Cancel", IDCANCEL, 95, 75, 50, 14, 0, WS_EX_LEFT
     AUTOCHECKBOX    "Parse on save (auto-parse file when it is saved)", IDC_CH_OPT_PARSEONSAVE, 5, 10, 175, 8, 0, WS_EX_LEFT
     AUTOCHECKBOX    "Use Editor colors", IDC_CH_OPT_EDITORCOLORS, 5, 24, 175, 8, 0, WS_EX_LEFT
+    AUTOCHECKBOX    "ctags: output to stdout instead of temp file", IDC_CH_OPT_CTAGSSTDOUT, 5, 38, 175, 8, 0, WS_EX_LEFT
 }
 
 

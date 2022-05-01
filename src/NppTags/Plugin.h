@@ -76,6 +76,9 @@ class CTagsViewPlugin : public CWinApp, public CEditorWrapper
         // the editor name, e.g. "AkelPad" or "Notepad++"
         virtual LPCTSTR ewGetEditorName() const override;
 
+        // the editor short name, e.g. "akel" or "npp"
+        virtual LPCTSTR ewGetEditorShortName() const override;
+
         // save current file
         virtual void ewDoSaveFile() override;
 

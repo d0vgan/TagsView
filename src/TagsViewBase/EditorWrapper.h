@@ -21,6 +21,9 @@ class IEditorWrapper
         // the editor name, e.g. "AkelPad" or "Notepad++"
         virtual LPCTSTR ewGetEditorName() const = 0;
 
+        // the editor short name, e.g. "akel" or "npp"
+        virtual LPCTSTR ewGetEditorShortName() const = 0;
+
         // save current file
         virtual void ewDoSaveFile() = 0;
 

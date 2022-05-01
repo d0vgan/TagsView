@@ -4,12 +4,13 @@
 #include "resource.h"
 
 typedef struct sCTagsThreadParam {
-    DWORD     dwThreadID;
-    CTagsDlg* pDlg;
+    CTagsDlg* pDlg { nullptr };
+    DWORD     dwThreadID { 0 };
+    bool      isUTF8{ false };
     tString   cmd_line;
     tString   source_file_name;
-    tString   temp_file_name;
-    BOOL      isUTF8;
+    tString   temp_input_file;
+    tString   temp_output_file;
 } tCTagsThreadParam;
 
 class string_cmp_less
@@ -429,7 +430,7 @@ CTagsDlg::CTagsDlg() : CDialog(IDD_MAIN)
 , m_crBkgndColor(0xFFFFFFFF)
 , m_hBkgndBrush(NULL)
 {
-    SetCTagsPath();
+    SetCTagsExePath();
     m_hTagsThreadEvent = ::CreateEvent(NULL, TRUE, TRUE, NULL);
     ::SetEvent(m_hTagsThreadEvent);
 }
@@ -450,19 +451,54 @@ CTagsDlg::~CTagsDlg()
     {
         ::DeleteObject(m_hBkgndBrush);
     }
+
+    removeCtagsTempOutputFile();
 }
 
 DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
 {
     CConsoleOutputRedirector cor;
+    CProcess proc;
     tCTagsThreadParam* tt = (tCTagsThreadParam *) lpParam;
+    std::basic_string<char> temp_output_tags;
 
     if ( tt->pDlg->GetHwnd() )
     {
-        cor.Execute( tt->cmd_line.c_str() );
-        if ( !tt->temp_file_name.empty() )
+        if ( tt->temp_output_file.empty() )
         {
-            ::DeleteFile( tt->temp_file_name.c_str() );
+            cor.Execute( tt->cmd_line.c_str() );
+        }
+        else
+        {
+            if ( ::GetFileAttributes(tt->temp_output_file.c_str()) != INVALID_FILE_ATTRIBUTES )
+            {
+                ::DeleteFile(tt->temp_output_file.c_str());
+            }
+
+            proc.Execute( tt->cmd_line.c_str(), TRUE );
+
+            HANDLE hFile = ::CreateFile(tt->temp_output_file.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+            if ( hFile != INVALID_HANDLE_VALUE )
+            {
+                DWORD dwSize = 0;
+                DWORD dwSizeLow = ::GetFileSize(hFile, &dwSize);
+
+                char* pBuf = new char[dwSizeLow];
+                dwSize = 0;
+                if ( ::ReadFile(hFile, pBuf, dwSizeLow, &dwSize, NULL) )
+                {
+                    if ( dwSizeLow == dwSize )
+                        temp_output_tags.append(pBuf, dwSizeLow);
+                }
+                delete [] pBuf;
+
+                ::CloseHandle(hFile);
+            }
+        }
+
+        if ( !tt->temp_input_file.empty() )
+        {
+            ::DeleteFile( tt->temp_input_file.c_str() );
         }
 
         ::WaitForSingleObject(tt->pDlg->m_hTagsThreadEvent, 4000);
@@ -472,7 +508,10 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
             {
                 const CEditorWrapper* pEdWr = tt->pDlg->m_pEdWr;
                 if ( pEdWr && (pEdWr->ewGetFilePathName() == tt->source_file_name) )
-                    tt->pDlg->OnAddTags( cor.GetDataString(), tt->isUTF8 ? true : false );
+                {
+                    const auto& tags = tt->temp_output_file.empty() ? cor.GetOutputString() : temp_output_tags;
+                    tt->pDlg->OnAddTags( tags, tt->isUTF8 );
+                }
             }
         }
     }
@@ -499,7 +538,7 @@ INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             if ( m_pEdWr )
             {
                 tString err = _T("File \'ctags.exe\' was not found. The path is incorrect:\n");
-                err += m_ctagsPath;
+                err += m_ctagsExeFilePath;
                 ::MessageBox( m_pEdWr->ewGetMainHwnd(), err.c_str(), _T("TagsView Error"), MB_OK | MB_ICONERROR );
             }
             return 0;
@@ -710,7 +749,7 @@ BOOL CTagsDlg::OnInitDialog()
 
     OnSize(true);
 
-    checkCTagsPath();
+    checkCTagsExePath();
 
     return TRUE;
 }
@@ -922,13 +961,12 @@ static eUnicodeType isUnicodeFile(HANDLE hFile)
 {
     if ( hFile )
     {
-        LONG nOffsetHigh;
-        DWORD dwBytesRead;
         unsigned char data[4];
 
-        nOffsetHigh = 0;
+        LONG nOffsetHigh = 0;
         ::SetFilePointer(hFile, 0, &nOffsetHigh, FILE_BEGIN);
-        dwBytesRead = 0;
+
+        DWORD dwBytesRead = 0;
         if ( ::ReadFile(hFile, data, 2, &dwBytesRead, NULL) )
         {
             if ( dwBytesRead == 2 )
@@ -954,120 +992,148 @@ static eUnicodeType isUnicodeFile(HANDLE hFile)
     return enc_NotUnicode;
 }
 
-static bool createTempFileIfNeeded(LPCTSTR cszFileName, BOOL* pIsUTF8, TCHAR pszTempFileName[2*MAX_PATH])
+static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
 {
-    bool bResult = false;
+    TCHAR szNum[32];
+    TCHAR szTempPath[MAX_PATH + 1];
+
+    szNum[0] = 0;
+    szTempPath[0] = 0;
+
+    auto getTempPath = [](TCHAR pszTempPath[])
+    {
+        if ( pszTempPath[0] == 0 )
+        {
+            DWORD dwLen = ::GetTempPath(MAX_PATH, pszTempPath);
+            if ( dwLen > 0 )
+            {
+                --dwLen;
+                if ( pszTempPath[dwLen] != _T('\\') && pszTempPath[dwLen] != _T('/') )
+                    pszTempPath[dwLen] = _T('\\');
+            }
+        }
+    };
+
+    auto getProcId = [](TCHAR pszNum[])
+    {
+        if ( pszNum[0] == 0 )
+        {
+            wsprintf(pszNum, _T("%u"), ::GetCurrentProcessId());
+        }
+    };
+
     HANDLE hFile = ::CreateFile(cszFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
     if ( hFile != INVALID_HANDLE_VALUE )
     {
         DWORD dwSize = 0;
         DWORD dwSizeLow = ::GetFileSize(hFile, &dwSize);
         eUnicodeType enc = isUnicodeFile(hFile);
+
         if ( enc == enc_NotUnicode )
         {
-            pszTempFileName[0] = 0;
-            *pIsUTF8 = FALSE;
-            bResult = true;
+            tt->isUTF8 = false;
         }
         else if ( enc == enc_UTF8 )
         {
-            pszTempFileName[0] = 0;
-            *pIsUTF8 = TRUE;
-            bResult = true;
+            tt->isUTF8 = true;
         }
         else if ( dwSizeLow > 2 )
         {
             int lenUCS2 = (dwSizeLow - 2)/2; // skip 2 leading BOM bytes
             wchar_t* pUCS2 = new wchar_t[lenUCS2 + 1];
-            if ( pUCS2 )
+
+            dwSize = 0;
+            if ( ::ReadFile(hFile, pUCS2, 2*lenUCS2, &dwSize, NULL) )
             {
-                dwSize = 0;
-                if ( ::ReadFile(hFile, pUCS2, 2*lenUCS2, &dwSize, NULL) )
+                if ( dwSize == 2*lenUCS2 )
                 {
-                    if ( dwSize == 2*lenUCS2 )
+                    ::CloseHandle(hFile);
+                    hFile = NULL;
+
+                    if ( enc == enc_UCS2_BE )
                     {
-                        ::CloseHandle(hFile);
-                        hFile = NULL;
-
-                        if ( enc == enc_UCS2_BE )
+                        // swap high and low bytes
+                        wchar_t* p = pUCS2;
+                        const wchar_t* pEnd = pUCS2 + lenUCS2;
+                        while ( p < pEnd )
                         {
-                            // swap high and low bytes
-                            wchar_t* p = pUCS2;
-                            const wchar_t* pEnd = pUCS2 + lenUCS2;
-                            while ( p < pEnd )
-                            {
-                                const wchar_t wch = *p;
-                                *p = ((wch >> 8) & 0x00FF) + (((wch & 0x00FF) << 8) & 0xFF00);
-                                ++p;
-                            }
-                        }
-                        pUCS2[lenUCS2] = 0;
-
-                        int lenUTF8 = ::WideCharToMultiByte(CP_UTF8, 0, pUCS2, lenUCS2, NULL, 0, NULL, NULL);
-                        if ( (lenUTF8 > 0) && (lenUTF8 != lenUCS2) )
-                        {
-                            char* pUTF8 = new char[lenUTF8 + 1];
-                            if ( pUTF8 )
-                            {
-                                pUTF8[0] = 0;
-                                ::WideCharToMultiByte(CP_UTF8, 0, pUCS2, lenUCS2, pUTF8, lenUTF8 + 1, NULL, NULL);
-                                pUTF8[lenUTF8] = 0;
-
-                                delete [] pUCS2;
-                                pUCS2 = NULL;
-
-                                pszTempFileName[0] = 0;
-                                dwSize = ::GetTempPath(2*MAX_PATH - 1, pszTempFileName);
-                                if ( dwSize > 0 )
-                                {
-                                    --dwSize;
-                                    if ( pszTempFileName[dwSize] != _T('\\') && pszTempFileName[dwSize] != _T('/') )
-                                        pszTempFileName[dwSize] = _T('\\');
-                                }
-                                // generating unique temp file name
-                                TCHAR szNum[64];
-                                szNum[0] = 0;
-                                wsprintf( szNum, _T("%lu_"), ::GetTickCount() );
-                                lstrcat( pszTempFileName, szNum );
-                                lstrcat( pszTempFileName, getFileName(cszFileName) );
-
-                                HANDLE hTempFile = ::CreateFile(pszTempFileName, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-                                if ( hTempFile != INVALID_HANDLE_VALUE )
-                                {
-                                    /*
-                                    // UTF-8 BOM bytes
-                                    ::WriteFile(hTempFile, (LPCVOID) "\xEF\xBB\xBF", 3, &dwSize, NULL);
-                                    */
-
-                                    dwSize = 0;
-                                    if ( ::WriteFile(hTempFile, pUTF8, lenUTF8, &dwSize, NULL) )
-                                    {
-                                        if ( dwSize == lenUTF8 )
-                                        {
-                                            *pIsUTF8 = TRUE;
-                                            bResult = true;
-                                        }
-                                    }
-
-                                    ::CloseHandle(hTempFile);
-                                }
-
-                                delete [] pUTF8;
-                            }
+                            const wchar_t wch = *p;
+                            *p = ((wch >> 8) & 0x00FF) + (((wch & 0x00FF) << 8) & 0xFF00);
+                            ++p;
                         }
                     }
-                }
+                    pUCS2[lenUCS2] = 0;
 
-                if ( pUCS2 != NULL )
-                    delete [] pUCS2;
+                    int lenUTF8 = ::WideCharToMultiByte(CP_UTF8, 0, pUCS2, lenUCS2, NULL, 0, NULL, NULL);
+                    if ( (lenUTF8 > 0) && (lenUTF8 != lenUCS2) )
+                    {
+                        char* pUTF8 = new char[lenUTF8 + 1];
+
+                        pUTF8[0] = 0;
+                        ::WideCharToMultiByte(CP_UTF8, 0, pUCS2, lenUCS2, pUTF8, lenUTF8 + 1, NULL, NULL);
+                        pUTF8[lenUTF8] = 0;
+
+                        delete [] pUCS2;
+                        pUCS2 = NULL;
+
+                        getTempPath(szTempPath);
+                        getProcId(szNum);
+
+                        // generating unique temp file name
+                        tt->temp_input_file.clear();
+                        tt->temp_input_file.reserve(128);
+                        tt->temp_input_file += szTempPath;
+                        tt->temp_input_file += tt->pDlg->GetEditorShortName();
+                        tt->temp_input_file += _T("_inp_"); 
+                        tt->temp_input_file += szNum;
+                        tt->temp_input_file += _T(".txt");
+
+                        HANDLE hTempFile = ::CreateFile(tt->temp_input_file.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+                        if ( hTempFile != INVALID_HANDLE_VALUE )
+                        {
+                            /*
+                            // UTF-8 BOM bytes
+                            ::WriteFile(hTempFile, (LPCVOID) "\xEF\xBB\xBF", 3, &dwSize, NULL);
+                            */
+
+                            dwSize = 0;
+                            if ( ::WriteFile(hTempFile, pUTF8, lenUTF8, &dwSize, NULL) )
+                            {
+                                if ( dwSize == lenUTF8 )
+                                {
+                                    tt->isUTF8 = true;
+                                }
+                            }
+
+                            ::CloseHandle(hTempFile);
+                        }
+
+                        delete [] pUTF8;
+                    }
+                }
             }
+
+            if ( pUCS2 != NULL )
+                delete [] pUCS2;
         }
 
-        if ( hFile != NULL )
-            ::CloseHandle(hFile);
+        ::CloseHandle(hFile);
     }
 
-    return bResult;
+    if ( !tt->pDlg->GetOptions().getBool(CTagsDlg::OPT_CTAGS_OUTPUTSTDOUT) )
+    {
+        getTempPath(szTempPath);
+        getProcId(szNum);
+
+        // generating unique temp file name
+        tt->temp_output_file.clear();
+        tt->temp_output_file.reserve(128);
+        tt->temp_output_file += szTempPath;
+        tt->temp_output_file += tt->pDlg->GetEditorShortName();
+        tt->temp_output_file += _T("tags_"); 
+        tt->temp_output_file += szNum;
+        tt->temp_output_file += _T(".txt");
+    }
 }
 
 void CTagsDlg::ParseFile(const TCHAR* const cszFileName)
@@ -1091,72 +1157,89 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName)
 
     if ( cszFileName && cszFileName[0] )
     {
-        BOOL isUTF8;
-        const TCHAR* pszWorkFileName;
-        TCHAR szTempFile[2*MAX_PATH];
-
-        isUTF8 = FALSE;
-        pszWorkFileName = cszFileName;
-        szTempFile[0] = 0;
-        if ( createTempFileIfNeeded(cszFileName, &isUTF8, szTempFile) )
+        tString ctagsOptPath = m_ctagsExeFilePath;
+        if ( ctagsOptPath.length() > 3 )
         {
-            if ( szTempFile[0] != 0 )
-                pszWorkFileName = szTempFile;
+            tString::size_type len = ctagsOptPath.length();
+            ctagsOptPath[len - 3] = _T('o');
+            ctagsOptPath[len - 2] = _T('p');
+            ctagsOptPath[len - 1] = _T('t');
+            if ( !isFilePathExist(ctagsOptPath.c_str(), false) )
+            {
+                // file does not exist - so don't use it
+                ctagsOptPath.clear();
+            }
+        }
+        else
+        {
+            // shit happened? ;)
+            ctagsOptPath.clear();
         }
 
         tCTagsThreadParam* tt = new tCTagsThreadParam;
-        if ( tt )
+        tt->pDlg = this;
+        tt->source_file_name = cszFileName;
+
+        createTempFilesIfNeeded(cszFileName, tt);
+
+        if ( !tt->temp_output_file.empty() )
         {
-            HANDLE  hThread;
-            tString ctagsOptPath = m_ctagsPath;
-
-            if ( ctagsOptPath.length() > 3 )
+            if ( tt->temp_output_file != m_ctagsTempOutputFilePath )
             {
-                tString::size_type len = ctagsOptPath.length();
-                ctagsOptPath[len - 3] = _T('o');
-                ctagsOptPath[len - 2] = _T('p');
-                ctagsOptPath[len - 1] = _T('t');
-                if ( !isFilePathExist(ctagsOptPath.c_str(), false) )
-                {
-                    // file does not exist - so don't use it
-                    ctagsOptPath.clear();
-                }
+                removeCtagsTempOutputFile();
+                m_ctagsTempOutputFilePath = tt->temp_output_file;
             }
-            else
-            {
-                // shit happened? ;)
-                ctagsOptPath.clear();
-            }
-
-            tt->dwThreadID = 0;
-            tt->pDlg = this;
-            tt->cmd_line = _T("\"");
-            tt->cmd_line += m_ctagsPath;
-            if ( !ctagsOptPath.empty() )
-            {
-                tt->cmd_line += _T("\" --options=\"");
-                tt->cmd_line += ctagsOptPath;
-            }
-            tt->cmd_line += _T("\" -f - --fields=fKnste \"");
-            tt->cmd_line += pszWorkFileName;
-            tt->cmd_line += _T("\"");
-            tt->source_file_name = cszFileName;
-            if ( pszWorkFileName == szTempFile )
-                tt->temp_file_name = szTempFile;
-            else
-                tt->temp_file_name.clear();
-            tt->isUTF8 = isUTF8;
-
-            ::ResetEvent(m_hTagsThreadEvent);
-            hThread = ::CreateThread(NULL, 0, CTagsThreadProc, tt, 0, &tt->dwThreadID);
-            if ( hThread )
-            {
-                ::InterlockedIncrement(&m_nTagsThreadCount);
-                m_dwLastTagsThreadID = tt->dwThreadID;
-                ::CloseHandle(hThread);
-            }
-            ::SetEvent(m_hTagsThreadEvent);
         }
+
+        // ctags command line:
+        //
+        //   --options=<pathname> 
+        //       Read additional options from file or directory.
+        //
+        //   -f -
+        //       tags are written to standard output.
+        //
+        //   --fields=fKnste
+        //       file/f       Indicates that the tag has file-limited visibility.
+        //       K            Kind of tag as long-name.
+        //       line/n       The line number where name is defined or referenced in input.
+        //       s            Scope of tag definition.
+        //       typeref/t    Type and name of a variable, typedef, or return type of callable like function as typeref: field.
+        //       end/e        Indicates the line number of the end lines of the language object.
+        //
+        tt->cmd_line.clear();
+        tt->cmd_line.reserve(512);
+        tt->cmd_line += _T("\"");
+        tt->cmd_line += m_ctagsExeFilePath;
+        if ( !ctagsOptPath.empty() )
+        {
+            tt->cmd_line += _T("\" --options=\"");
+            tt->cmd_line += ctagsOptPath;
+        }
+        tt->cmd_line += _T("\" -f ");
+        if ( tt->temp_output_file.empty() )
+        {
+            tt->cmd_line += _T("-");
+        }
+        else
+        {
+            tt->cmd_line += _T("\"");
+            tt->cmd_line += tt->temp_output_file;
+            tt->cmd_line += _T("\"");
+        }
+        tt->cmd_line += _T(" --fields=fKnste \"");
+        tt->cmd_line += tt->temp_input_file.empty() ? tt->source_file_name : tt->temp_input_file;
+        tt->cmd_line += _T("\"");
+
+        ::ResetEvent(m_hTagsThreadEvent);
+        HANDLE hThread = ::CreateThread(NULL, 0, CTagsThreadProc, tt, 0, &tt->dwThreadID);
+        if ( hThread )
+        {
+            ::InterlockedIncrement(&m_nTagsThreadCount);
+            m_dwLastTagsThreadID = tt->dwThreadID;
+            ::CloseHandle(hThread);
+        }
+        ::SetEvent(m_hTagsThreadEvent);
     }
 }
 
@@ -1363,6 +1446,11 @@ void CTagsDlg::UpdateNavigationButtons()
     }
 }
 
+LPCTSTR CTagsDlg::GetEditorShortName() const
+{
+    return ( m_pEdWr ? m_pEdWr->ewGetEditorShortName() : _T("") );
+}
+
 int CTagsDlg::addListViewItem(int nItem, const CTagsResultParser::tTagData& tagData)
 {
     int    n = -1;
@@ -1476,11 +1564,22 @@ void CTagsDlg::ApplyColors()
     }
 }
 
-void CTagsDlg::checkCTagsPath()
+void CTagsDlg::checkCTagsExePath()
 {
-    if ( !isFilePathExist(m_ctagsPath.c_str(), false) )
+    if ( !isFilePathExist(m_ctagsExeFilePath.c_str(), false) )
     {
         this->PostMessage(WM_CTAGSPATHFAILED, 0, 0);
+    }
+}
+
+void CTagsDlg::removeCtagsTempOutputFile()
+{
+    if ( !m_ctagsTempOutputFilePath.empty() )
+    {
+        if ( ::GetFileAttributes(m_ctagsTempOutputFilePath.c_str()) != INVALID_FILE_ATTRIBUTES )
+        {
+            ::DeleteFile(m_ctagsTempOutputFilePath.c_str());
+        }
     }
 }
 
@@ -1518,6 +1617,7 @@ void CTagsDlg::initOptions()
     const TCHAR cszView[]     = _T("View");
     const TCHAR cszColors[]   = _T("Colors");
     const TCHAR cszBehavior[] = _T("Behavior");
+    const TCHAR cszCtags[]    = _T("Ctags");
 
     m_opt.ReserveMemory(OPT_COUNT);
 
@@ -1534,6 +1634,8 @@ void CTagsDlg::initOptions()
     //m_opt.AddHexInt( OPT_COLORS_SELN,    cszColor, _T("SelN"),    0 );
 
     m_opt.AddBool( OPT_BEHAVIOR_PARSEONSAVE, cszBehavior, _T("ParseOnSave"), true );
+
+    m_opt.AddBool( OPT_CTAGS_OUTPUTSTDOUT, cszCtags, _T("OutputToStdout"), false );
 }
 
 bool CTagsDlg::isTagMatchFilter(const string& tagName)

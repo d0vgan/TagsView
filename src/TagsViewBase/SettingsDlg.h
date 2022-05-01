@@ -23,6 +23,7 @@ class CSettingsDlg : public CDialog
         COptionsManager& m_opt;
         HWND m_hChParseOnSave;
         HWND m_hCdEditColors;
+        HWND m_hChCtagsStdout;
 };
 
 //---------------------------------------------------------------------------

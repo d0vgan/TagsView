@@ -26,7 +26,8 @@
 #define IDC_LV_TAGS                             1007
 #define IDC_TV_TAGS                             1008
 #define IDC_CH_OPT_PARSEONSAVE                  2001
-#define IDC_CH_OPT_EDITORCOLORS                 2002
+#define IDC_CH_OPT_EDITORCOLORS                 2011
+#define IDC_CH_OPT_CTAGSSTDOUT                  2021
 #define IDM_PREVPOS                             40000
 #define IDM_NEXTPOS                             40001
 #define IDM_SORTLINE                            40002
