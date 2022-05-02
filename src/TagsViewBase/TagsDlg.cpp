@@ -1277,7 +1277,8 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName)
 
     m_prevSelStart = -1;
 
-    if ( cszFileName && cszFileName[0] )
+    if ( cszFileName && cszFileName[0] &&
+         ::GetFileAttributes(cszFileName) != INVALID_FILE_ATTRIBUTES )
     {
         tString ctagsOptPath = m_ctagsExeFilePath;
         if ( ctagsOptPath.length() > 3 )
