@@ -28,6 +28,17 @@ namespace
         }
         return s;
     }
+
+    // replaces all occurrences of `what` with `with`
+    void string_replace_all(std::string& str, const std::string& what, const std::string& with)
+    {
+        size_t pos = 0;
+        while ( (pos = str.find(what, pos)) != std::string::npos )
+        {
+            str.replace(pos, what.length(), with);
+            pos += with.length();
+        }
+    }
 }
 
 void CTagsResultParser::DelDupSpaces(string& s)
@@ -80,6 +91,9 @@ void CTagsResultParser::Parse(const char* s, tags_map& m)
     const char* pn; // pos of the nearest '\n'
     tTagData tagData;
     tags_map::iterator itr;
+
+    const std::string double_backslash = "\\\\";
+    const std::string single_backslash = "\\";
 
     while ( s != NULL && *s != 0 )
     {
@@ -214,7 +228,10 @@ void CTagsResultParser::Parse(const char* s, tags_map& m)
                     }
                 }
 
+                string_replace_all(tagData.tagName, double_backslash, single_backslash);
                 DelDupSpaces(tagData.tagName);
+
+                string_replace_all(tagData.tagPattern, double_backslash, single_backslash);
                 DelDupSpaces(tagData.tagPattern);
 
                 itr = m.insert( std::make_pair(tagData.line, tagData) );
