@@ -453,7 +453,25 @@ CTagsDlg::~CTagsDlg()
         ::DeleteObject(m_hBkgndBrush);
     }
 
-    removeCtagsTempOutputFile();
+    if ( m_opt.getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
+    {
+        DeleteTempFile(m_ctagsTempInputFilePath);
+    }
+    if ( m_opt.getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
+    {
+        DeleteTempFile(m_ctagsTempOutputFilePath);
+    }
+}
+
+void CTagsDlg::DeleteTempFile(const tString& filePath)
+{
+    if ( !filePath.empty() )
+    {
+        if ( ::GetFileAttributes(filePath.c_str()) != INVALID_FILE_ATTRIBUTES )
+        {
+            ::DeleteFile( filePath.c_str() );
+        }
+    }
 }
 
 DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
@@ -473,10 +491,7 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
         }
         else
         {
-            if ( ::GetFileAttributes(tt->temp_output_file.c_str()) != INVALID_FILE_ATTRIBUTES )
-            {
-                ::DeleteFile(tt->temp_output_file.c_str());
-            }
+            DeleteTempFile(tt->temp_output_file); // ctags will be outputting to this file
 
             proc.Execute( tt->cmd_line.c_str(), TRUE );
 
@@ -502,9 +517,14 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
             }
         }
 
-        if ( !tt->temp_input_file.empty() )
+        COptionsManager& opt = tt->pDlg->GetOptions();
+        if ( opt.getInt(CTagsDlg::OPT_DEBUG_DELETETEMPINPUTFILE) == CTagsDlg::DTF_ALWAYSDELETE )
         {
-            ::DeleteFile( tt->temp_input_file.c_str() );
+            DeleteTempFile(tt->temp_input_file);
+        }
+        if ( opt.getInt(CTagsDlg::OPT_DEBUG_DELETETEMPOUTPUTFILE) == CTagsDlg::DTF_ALWAYSDELETE )
+        {
+            DeleteTempFile(tt->temp_output_file);
         }
 
         ::WaitForSingleObject(tt->pDlg->m_hTagsThreadEvent, 4000);
@@ -525,23 +545,25 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
             }
         }
     }
-
-    if ( !tt->temp_input_file.empty() )
+    else
     {
-        if ( ::GetFileAttributes(tt->temp_input_file.c_str()) != INVALID_FILE_ATTRIBUTES )
+        CTagsDlg* pDlg = tt->pDlg;
+        if ( !pDlg || pDlg->GetOptions().getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
         {
-            ::DeleteFile( tt->temp_input_file.c_str() );
+            DeleteTempFile(tt->temp_input_file);
+        }
+        if ( !pDlg || pDlg->GetOptions().getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
+        {
+            DeleteTempFile(tt->temp_output_file);
         }
     }
 
     if ( !bTagsAdded )
     {
-        if ( !tt->temp_output_file.empty() )
+        CTagsDlg* pDlg = tt->pDlg;
+        if ( !pDlg || pDlg->GetOptions().getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
         {
-            if ( ::GetFileAttributes(tt->temp_output_file.c_str()) != INVALID_FILE_ATTRIBUTES )
-            {
-                ::DeleteFile( tt->temp_output_file.c_str() );
-            }
+            DeleteTempFile(tt->temp_output_file);
         }
     }
 
@@ -644,6 +666,14 @@ BOOL CTagsDlg::OnCommand(WPARAM wParam, LPARAM lParam)
             if ( m_pEdWr )
             {
                 m_pEdWr->ewOnTagsViewClose();
+            }
+            if ( m_opt.getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
+            {
+                DeleteTempFile(m_ctagsTempInputFilePath);
+            }
+            if ( m_opt.getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
+            {
+                DeleteTempFile(m_ctagsTempOutputFilePath);
             }
             break;
     }
@@ -1021,7 +1051,7 @@ static eUnicodeType isUnicodeFile(HANDLE hFile)
     return enc_NotUnicode;
 }
 
-static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
+static void createUniqueTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
 {
     TCHAR szUniqueId[32];
     TCHAR szTempPath[MAX_PATH + 1];
@@ -1132,6 +1162,7 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
                         if ( pszExt != NULL )
                             temp_file += pszExt; // original file extension
 
+                        bool bTempFileWritten = false;
                         HANDLE hTempFile = ::CreateFile(tt->temp_input_file.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
                         if ( hTempFile != INVALID_HANDLE_VALUE )
                         {
@@ -1146,10 +1177,17 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
                                 if ( dwSize == lenUTF8 )
                                 {
                                     tt->isUTF8 = true;
+                                    bTempFileWritten = true;
                                 }
                             }
 
                             ::CloseHandle(hTempFile);
+                        }
+
+                        if ( !bTempFileWritten )
+                        {
+                            CTagsDlg::DeleteTempFile(tt->temp_input_file);
+                            tt->temp_input_file.clear();
                         }
                     }
                 }
@@ -1221,11 +1259,23 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName)
         tt->pDlg = this;
         tt->source_file_name = cszFileName;
 
-        createTempFilesIfNeeded(cszFileName, tt);
+        createUniqueTempFilesIfNeeded(cszFileName, tt);
+
+        if ( tt->temp_input_file != m_ctagsTempInputFilePath )
+        {
+            if ( m_opt.getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
+            {
+                DeleteTempFile(m_ctagsTempInputFilePath);
+            }
+            m_ctagsTempInputFilePath = tt->temp_input_file;
+        }
 
         if ( tt->temp_output_file != m_ctagsTempOutputFilePath )
         {
-            removeCtagsTempOutputFile();
+            if ( m_opt.getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
+            {
+                DeleteTempFile(m_ctagsTempOutputFilePath);
+            }
             m_ctagsTempOutputFilePath = tt->temp_output_file;
         }
 
@@ -1613,17 +1663,6 @@ void CTagsDlg::checkCTagsExePath()
     }
 }
 
-void CTagsDlg::removeCtagsTempOutputFile()
-{
-    if ( !m_ctagsTempOutputFilePath.empty() )
-    {
-        if ( ::GetFileAttributes(m_ctagsTempOutputFilePath.c_str()) != INVALID_FILE_ATTRIBUTES )
-        {
-            ::DeleteFile(m_ctagsTempOutputFilePath.c_str());
-        }
-    }
-}
-
 CTagsResultParser::tags_map::iterator CTagsDlg::getTagByLine(const int line)
 {
     CTagsResultParser::tags_map::iterator itr = m_tags.lower_bound(line);
@@ -1659,14 +1698,17 @@ void CTagsDlg::initOptions()
     const TCHAR cszColors[]   = _T("Colors");
     const TCHAR cszBehavior[] = _T("Behavior");
     const TCHAR cszCtags[]    = _T("Ctags");
+    const TCHAR cszDebug[]    = _T("Debug");
 
     m_opt.ReserveMemory(OPT_COUNT);
 
+    // View section
     m_opt.AddInt( OPT_VIEW_MODE,      cszView,  _T("Mode"),       TVM_LIST );
     m_opt.AddInt( OPT_VIEW_SORT,      cszView,  _T("Sort"),       TSM_LINE );
     m_opt.AddInt( OPT_VIEW_WIDTH,     cszView,  _T("Width"),      220      );
     m_opt.AddInt( OPT_VIEW_NAMEWIDTH, cszView,  _T("NameWidth"),  220      );
 
+    // Colors section
     m_opt.AddBool( OPT_COLORS_USEEDITORCOLORS,  cszColors, _T("UseEditorColors"), true );
     //m_opt.AddHexInt( OPT_COLORS_BKGND,   cszColor, _T("BkGnd"),   0 );
     //m_opt.AddHexInt( OPT_COLORS_TEXT,    cszColor, _T("Text"),    0 );
@@ -1674,9 +1716,15 @@ void CTagsDlg::initOptions()
     //m_opt.AddHexInt( OPT_COLORS_SELA,    cszColor, _T("SelA"),    0 );
     //m_opt.AddHexInt( OPT_COLORS_SELN,    cszColor, _T("SelN"),    0 );
 
+    // Behavior section
     m_opt.AddBool( OPT_BEHAVIOR_PARSEONSAVE, cszBehavior, _T("ParseOnSave"), true );
 
+    // Ctags section
     m_opt.AddBool( OPT_CTAGS_OUTPUTSTDOUT, cszCtags, _T("OutputToStdout"), false );
+
+    // Debug section
+    m_opt.AddInt(OPT_DEBUG_DELETETEMPINPUTFILE, cszDebug, _T("DeleteTempInputFiles"), DTF_ALWAYSDELETE);
+    m_opt.AddInt(OPT_DEBUG_DELETETEMPOUTPUTFILE, cszDebug, _T("DeleteTempOutputFiles"), DTF_ALWAYSDELETE);
 }
 
 bool CTagsDlg::isTagMatchFilter(const string& tagName)

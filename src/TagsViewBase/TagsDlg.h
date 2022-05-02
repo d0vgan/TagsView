@@ -126,6 +126,12 @@ class CTagsDlg : public CDialog
             WM_CTAGSPATHFAILED = (WM_USER + 7050)
         };
 
+        enum eDeleteTempFile {
+            DTF_NEVERDELETE  = 0,  // don't delete (for debug purpose)
+            DTF_ALWAYSDELETE = 1,  // delete once no more needed
+            DTF_PRESERVELAST = 2   // preserve the last temp file until the next Parse() or exiting
+        };
+
         enum eOptions {
             OPT_VIEW_MODE = 0,
             OPT_VIEW_SORT,
@@ -143,6 +149,9 @@ class CTagsDlg : public CDialog
 
             OPT_CTAGS_OUTPUTSTDOUT,
 
+            OPT_DEBUG_DELETETEMPINPUTFILE,
+            OPT_DEBUG_DELETETEMPOUTPUTFILE,
+
             OPT_COUNT
         };
 
@@ -151,6 +160,8 @@ class CTagsDlg : public CDialog
     public:
         CTagsDlg();
         virtual ~CTagsDlg();
+
+        static void DeleteTempFile(const tString& filePath);
 
         const eTagsSortMode GetSortMode() const { return m_sortMode; }
         const eTagsViewMode GetViewMode() const { return m_viewMode; }
@@ -261,7 +272,6 @@ class CTagsDlg : public CDialog
         void sortTagsByType();
 
         void checkCTagsExePath();
-        void removeCtagsTempOutputFile();
 
         CTagsResultParser::tags_map::iterator getTagByLine(const int line);
         CTagsResultParser::tags_map::iterator getTagByName(const string& tagName);
@@ -288,6 +298,7 @@ class CTagsDlg : public CDialog
         CTagsToolTips   m_ttHints;
         string          m_tagFilter;
         tString         m_ctagsExeFilePath;
+        tString         m_ctagsTempInputFilePath;
         tString         m_ctagsTempOutputFilePath;
         CTagsResultParser::tags_map m_tags;
         bool            m_isUTF8tags;
