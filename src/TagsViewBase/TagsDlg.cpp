@@ -62,6 +62,20 @@ static LPCTSTR getFileName(LPCTSTR pszFilePathName)
     return pszFilePathName;
 }
 
+static LPCTSTR getFileExt(LPCTSTR pszFilePathName)
+{
+    const TCHAR* pszExt = pszFilePathName + lstrlen(pszFilePathName);
+    while ( --pszExt >= pszFilePathName )
+    {
+        if ( *pszExt == _T('.') )
+            return pszExt;
+
+        if ( *pszExt == _T('\\') || *pszExt == _T('/') )
+            break;
+    }
+    return NULL;
+}
+
 static void cutEditText(HWND hEdit, BOOL bCutAfterCaret)
 {
     DWORD   dwSelPos1 = 0;
@@ -1009,210 +1023,239 @@ bool CTagsDlg::GoToTag(const TCHAR* cszTagName)  // not implemented yet
     return false;
 }
 
-enum eUnicodeType {
-    enc_NotUnicode = 0,
-    enc_UCS2_LE,
-    enc_UCS2_BE,
-    enc_UTF8
-};
-
-static eUnicodeType isUnicodeFile(HANDLE hFile)
+namespace
 {
-    if ( hFile )
+    enum eUnicodeType {
+        enc_NotUnicode = 0,
+        enc_UCS2_LE,
+        enc_UCS2_BE,
+        enc_UTF8
+    };
+
+    eUnicodeType isUnicodeFile(HANDLE hFile)
     {
-        unsigned char data[4];
-
-        LONG nOffsetHigh = 0;
-        ::SetFilePointer(hFile, 0, &nOffsetHigh, FILE_BEGIN);
-
-        DWORD dwBytesRead = 0;
-        if ( ::ReadFile(hFile, data, 2, &dwBytesRead, NULL) )
+        if ( hFile )
         {
-            if ( dwBytesRead == 2 )
+            unsigned char data[4];
+
+            LONG nOffsetHigh = 0;
+            ::SetFilePointer(hFile, 0, &nOffsetHigh, FILE_BEGIN);
+
+            DWORD dwBytesRead = 0;
+            if ( ::ReadFile(hFile, data, 2, &dwBytesRead, NULL) )
             {
-                if ( data[0] == 0xFF && data[1] == 0xFE )
-                    return enc_UCS2_LE;
-
-                if ( data[0] == 0xFE && data[1] == 0xFF )
-                    return enc_UCS2_BE;
-
-                if ( data[0] == 0xEF && data[1] == 0xBB )
+                if ( dwBytesRead == 2 )
                 {
-                    if ( ::ReadFile(hFile, data, 1, &dwBytesRead, NULL) )
+                    if ( data[0] == 0xFF && data[1] == 0xFE )
+                        return enc_UCS2_LE;
+
+                    if ( data[0] == 0xFE && data[1] == 0xFF )
+                        return enc_UCS2_BE;
+
+                    if ( data[0] == 0xEF && data[1] == 0xBB )
                     {
-                        if ( dwBytesRead == 1 && data[0] == 0xBF )
-                            return enc_UTF8;
+                        if ( ::ReadFile(hFile, data, 1, &dwBytesRead, NULL) )
+                        {
+                            if ( dwBytesRead == 1 && data[0] == 0xBF )
+                                return enc_UTF8;
+                        }
                     }
                 }
             }
         }
+
+        return enc_NotUnicode;
     }
 
-    return enc_NotUnicode;
-}
-
-static void createUniqueTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
-{
-    TCHAR szUniqueId[32];
-    TCHAR szTempPath[MAX_PATH + 1];
-
-    szUniqueId[0] = 0;
-    szTempPath[0] = 0;
-
-    auto getTempPath = [](TCHAR pszTempPath[])
+    void convertUcs2beToUcs2le(wchar_t* pszUCS2, int lenUCS2)
     {
-        if ( pszTempPath[0] == 0 )
+        // swap high and low bytes
+        wchar_t* p = pszUCS2;
+        const wchar_t* pEnd = pszUCS2 + lenUCS2;
+        while ( p < pEnd )
         {
-            DWORD dwLen = ::GetTempPath(MAX_PATH, pszTempPath);
-            if ( dwLen > 0 )
+            const wchar_t wch = *p;
+            *p = ((wch >> 8) & 0x00FF) + (((wch & 0x00FF) << 8) & 0xFF00);
+            ++p;
+        }
+    }
+
+    std::unique_ptr<wchar_t[]> readFromFileAsUcs2(HANDLE hFile, int lenUCS2)
+    {
+        std::unique_ptr<wchar_t[]> pUCS2(new wchar_t[lenUCS2 + 1]);
+        DWORD dwBytesRead = 0;
+        bool isRead = false;
+
+        if ( ::ReadFile(hFile, pUCS2.get(), 2*lenUCS2, &dwBytesRead, NULL) )
+        {
+            if ( dwBytesRead == 2*lenUCS2 )
             {
-                --dwLen;
-                if ( pszTempPath[dwLen] != _T('\\') && pszTempPath[dwLen] != _T('/') )
-                    pszTempPath[dwLen] = _T('\\');
+                pUCS2[lenUCS2] = 0;
+                isRead = true;
             }
         }
-    };
 
-    auto getUniqueId = [](TCHAR pszUniqueId[])
+        if ( !isRead )
+        {
+            wchar_t* ptr = pUCS2.release();
+            delete [] ptr;
+        }
+
+        return pUCS2;
+    }
+
+    bool writeToFileAsUtf8(LPCTSTR pszFileName, const wchar_t* pszUCS2, int lenUCS2)
     {
-        if ( pszUniqueId[0] == 0 )
-        {
-            wsprintf(pszUniqueId, _T("%u_%X"), ::GetCurrentProcessId(), ::GetTickCount());
-        }
-    };
+        bool isFileWritten = false;
 
-    HANDLE hFile = ::CreateFile(cszFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-    if ( hFile != INVALID_HANDLE_VALUE )
-    {
-        DWORD dwSize = 0;
-        DWORD dwSizeLow = ::GetFileSize(hFile, &dwSize);
-        eUnicodeType enc = isUnicodeFile(hFile);
+        int lenUTF8 = ::WideCharToMultiByte(CP_UTF8, 0, pszUCS2, lenUCS2, NULL, 0, NULL, NULL);
+        if ( lenUTF8 > 0 )
+        {
+            std::unique_ptr<char[]> pUTF8(new char[lenUTF8 + 1]);
 
-        if ( enc == enc_NotUnicode )
-        {
-            tt->isUTF8 = false;
-        }
-        else if ( enc == enc_UTF8 )
-        {
-            tt->isUTF8 = true;
-        }
-        else if ( dwSizeLow > 2 )
-        {
-            int lenUCS2 = (dwSizeLow - 2)/2; // skip 2 leading BOM bytes
-            std::unique_ptr<wchar_t[]> pUCS2(new wchar_t[lenUCS2 + 1]);
+            pUTF8[0] = 0;
+            ::WideCharToMultiByte(CP_UTF8, 0, pszUCS2, lenUCS2, pUTF8.get(), lenUTF8 + 1, NULL, NULL);
+            pUTF8[lenUTF8] = 0;
 
-            dwSize = 0;
-            if ( ::ReadFile(hFile, pUCS2.get(), 2*lenUCS2, &dwSize, NULL) )
+            HANDLE hFile = ::CreateFile(pszFileName, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+            if ( hFile != INVALID_HANDLE_VALUE )
             {
-                if ( dwSize == 2*lenUCS2 )
+                // UTF-8 BOM bytes
+                // ::WriteFile(hTempFile, (LPCVOID) "\xEF\xBB\xBF", 3, &dwSize, NULL);
+
+                DWORD dwBytesWritten = 0;
+                if ( ::WriteFile(hFile, pUTF8.get(), lenUTF8, &dwBytesWritten, NULL) )
+                {
+                    if ( dwBytesWritten == lenUTF8 )
+                    {
+                        isFileWritten = true;
+                    }
+                }
+
+                ::CloseHandle(hFile);
+
+                if ( !isFileWritten )
+                {
+                    ::DeleteFile(pszFileName);
+                }
+            }
+        }
+
+        return isFileWritten;
+    }
+
+    void createUniqueTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
+    {
+        TCHAR szUniqueId[32];
+        TCHAR szTempPath[MAX_PATH + 1];
+
+        szUniqueId[0] = 0;
+        szTempPath[0] = 0;
+
+        auto getTempPath = [](TCHAR pszTempPath[])
+        {
+            if ( pszTempPath[0] == 0 )
+            {
+                DWORD dwLen = ::GetTempPath(MAX_PATH, pszTempPath);
+                if ( dwLen > 0 )
+                {
+                    --dwLen;
+                    if ( pszTempPath[dwLen] != _T('\\') && pszTempPath[dwLen] != _T('/') )
+                        pszTempPath[dwLen] = _T('\\');
+                }
+            }
+        };
+
+        auto getUniqueId = [](TCHAR pszUniqueId[])
+        {
+            if ( pszUniqueId[0] == 0 )
+            {
+                wsprintf(pszUniqueId, _T("%u_%X"), ::GetCurrentProcessId(), ::GetTickCount());
+            }
+        };
+
+        HANDLE hFile = ::CreateFile(cszFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+        if ( hFile == INVALID_HANDLE_VALUE )
+        {
+            hFile = ::CreateFile(cszFileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+        }
+        if ( hFile != INVALID_HANDLE_VALUE )
+        {
+            DWORD dwFileSizeHigh = 0;
+            DWORD dwFileSize = ::GetFileSize(hFile, &dwFileSizeHigh);
+
+            eUnicodeType enc = isUnicodeFile(hFile);
+            if ( enc == enc_NotUnicode )
+            {
+                tt->isUTF8 = false;
+            }
+            else if ( enc == enc_UTF8 )
+            {
+                tt->isUTF8 = true;
+            }
+            else if ( dwFileSize > 2 )
+            {
+                int lenUCS2 = (dwFileSize - 2)/2; // skip 2 leading BOM bytes
+                std::unique_ptr<wchar_t[]> pUCS2 = readFromFileAsUcs2(hFile, lenUCS2);
+
+                if ( pUCS2 )
                 {
                     ::CloseHandle(hFile);
                     hFile = NULL;
 
                     if ( enc == enc_UCS2_BE )
                     {
-                        // swap high and low bytes
-                        wchar_t* p = pUCS2.get();
-                        const wchar_t* pEnd = pUCS2.get() + lenUCS2;
-                        while ( p < pEnd )
-                        {
-                            const wchar_t wch = *p;
-                            *p = ((wch >> 8) & 0x00FF) + (((wch & 0x00FF) << 8) & 0xFF00);
-                            ++p;
-                        }
+                        convertUcs2beToUcs2le(pUCS2.get(), lenUCS2);
                     }
-                    pUCS2[lenUCS2] = 0;
 
-                    int lenUTF8 = ::WideCharToMultiByte(CP_UTF8, 0, pUCS2.get(), lenUCS2, NULL, 0, NULL, NULL);
-                    if ( lenUTF8 > 0 )
+                    getTempPath(szTempPath);
+                    getUniqueId(szUniqueId);
+
+                    const TCHAR* pszExt = getFileExt(cszFileName);
+
+                    // generating unique temp file name
+                    auto& temp_file = tt->temp_input_file;
+                    temp_file.clear();
+                    temp_file.reserve(128);
+                    temp_file += szTempPath;
+                    temp_file += tt->pDlg->GetEditorShortName();
+                    temp_file += _T("_inp_"); 
+                    temp_file += szUniqueId;
+                    if ( pszExt != NULL )
+                        temp_file += pszExt; // original file extension
+
+                    if ( writeToFileAsUtf8(tt->temp_input_file.c_str(), pUCS2.get(), lenUCS2) )
                     {
-                        std::unique_ptr<char[]> pUTF8(new char[lenUTF8 + 1]);
-
-                        pUTF8[0] = 0;
-                        ::WideCharToMultiByte(CP_UTF8, 0, pUCS2.get(), lenUCS2, pUTF8.get(), lenUTF8 + 1, NULL, NULL);
-                        pUTF8[lenUTF8] = 0;
-
-                        wchar_t* ptr = pUCS2.release();
-                        delete [] ptr;
-
-                        getTempPath(szTempPath);
-                        getUniqueId(szUniqueId);
-
-                        const TCHAR* pszExt = cszFileName + lstrlen(cszFileName);
-                        while ( --pszExt >= cszFileName )
-                        {
-                            if ( *pszExt == _T('.') )
-                                break;
-
-                            if ( *pszExt == _T('\\') || *pszExt == _T('/') )
-                            {
-                                pszExt = NULL;
-                                break;
-                            }
-                        }
-
-                        // generating unique temp file name
-                        auto& temp_file = tt->temp_input_file;
-                        temp_file.clear();
-                        temp_file.reserve(128);
-                        temp_file += szTempPath;
-                        temp_file += tt->pDlg->GetEditorShortName();
-                        temp_file += _T("_inp_"); 
-                        temp_file += szUniqueId;
-                        if ( pszExt != NULL )
-                            temp_file += pszExt; // original file extension
-
-                        bool bTempFileWritten = false;
-                        HANDLE hTempFile = ::CreateFile(tt->temp_input_file.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-                        if ( hTempFile != INVALID_HANDLE_VALUE )
-                        {
-                            /*
-                            // UTF-8 BOM bytes
-                            ::WriteFile(hTempFile, (LPCVOID) "\xEF\xBB\xBF", 3, &dwSize, NULL);
-                            */
-
-                            dwSize = 0;
-                            if ( ::WriteFile(hTempFile, pUTF8.get(), lenUTF8, &dwSize, NULL) )
-                            {
-                                if ( dwSize == lenUTF8 )
-                                {
-                                    tt->isUTF8 = true;
-                                    bTempFileWritten = true;
-                                }
-                            }
-
-                            ::CloseHandle(hTempFile);
-                        }
-
-                        if ( !bTempFileWritten )
-                        {
-                            CTagsDlg::DeleteTempFile(tt->temp_input_file);
-                            tt->temp_input_file.clear();
-                        }
+                        tt->isUTF8 = true;
+                    }
+                    else
+                    {
+                        tt->temp_input_file.clear();
                     }
                 }
             }
+
+            if ( hFile != NULL )
+                ::CloseHandle(hFile);
         }
 
-        if ( hFile != NULL )
-            ::CloseHandle(hFile);
+        if ( !tt->pDlg->GetOptions().getBool(CTagsDlg::OPT_CTAGS_OUTPUTSTDOUT) )
+        {
+            getTempPath(szTempPath);
+            getUniqueId(szUniqueId);
+
+            // generating unique temp file name
+            auto& temp_file = tt->temp_output_file;
+            temp_file.clear();
+            temp_file.reserve(128);
+            temp_file += szTempPath;
+            temp_file += tt->pDlg->GetEditorShortName();
+            temp_file += _T("tags_"); 
+            temp_file += szUniqueId;
+            temp_file += _T(".txt");
+        }
     }
 
-    if ( !tt->pDlg->GetOptions().getBool(CTagsDlg::OPT_CTAGS_OUTPUTSTDOUT) )
-    {
-        getTempPath(szTempPath);
-        getUniqueId(szUniqueId);
-
-        // generating unique temp file name
-        auto& temp_file = tt->temp_output_file;
-        temp_file.clear();
-        temp_file.reserve(128);
-        temp_file += szTempPath;
-        temp_file += tt->pDlg->GetEditorShortName();
-        temp_file += _T("tags_"); 
-        temp_file += szUniqueId;
-        temp_file += _T(".txt");
-    }
 }
 
 void CTagsDlg::ParseFile(const TCHAR* const cszFileName)
