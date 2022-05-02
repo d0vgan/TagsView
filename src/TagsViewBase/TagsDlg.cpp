@@ -460,10 +460,12 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
     CConsoleOutputRedirector cor;
     CProcess proc;
     tCTagsThreadParam* tt = (tCTagsThreadParam *) lpParam;
-    char* pTempTags = NULL;
+    bool bTagsAdded = false;
 
     if ( tt->pDlg->GetHwnd() )
     {
+        char* pTempTags = NULL;
+
         if ( tt->temp_output_file.empty() )
         {
             cor.Execute( tt->cmd_line.c_str() );
@@ -517,9 +519,30 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
                     else
                         tt->pDlg->OnAddTags( pTempTags, tt->isUTF8 );
 
-                    if ( pTempTags != NULL )
-                        delete [] pTempTags;
+                    bTagsAdded = true;
                 }
+            }
+        }
+
+        if ( pTempTags != NULL )
+            delete [] pTempTags;
+    }
+
+    if ( !tt->temp_input_file.empty() )
+    {
+        if ( ::GetFileAttributes(tt->temp_input_file.c_str()) != INVALID_FILE_ATTRIBUTES )
+        {
+            ::DeleteFile( tt->temp_input_file.c_str() );
+        }
+    }
+
+    if ( !bTagsAdded )
+    {
+        if ( !tt->temp_output_file.empty() )
+        {
+            if ( ::GetFileAttributes(tt->temp_output_file.c_str()) != INVALID_FILE_ATTRIBUTES )
+            {
+                ::DeleteFile( tt->temp_output_file.c_str() );
             }
         }
     }
@@ -1002,10 +1025,10 @@ static eUnicodeType isUnicodeFile(HANDLE hFile)
 
 static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
 {
-    TCHAR szNum[32];
+    TCHAR szUniqueId[32];
     TCHAR szTempPath[MAX_PATH + 1];
 
-    szNum[0] = 0;
+    szUniqueId[0] = 0;
     szTempPath[0] = 0;
 
     auto getTempPath = [](TCHAR pszTempPath[])
@@ -1022,11 +1045,11 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
         }
     };
 
-    auto getProcId = [](TCHAR pszNum[])
+    auto getUniqueId = [](TCHAR pszUniqueId[])
     {
-        if ( pszNum[0] == 0 )
+        if ( pszUniqueId[0] == 0 )
         {
-            wsprintf(pszNum, _T("%u"), ::GetCurrentProcessId());
+            wsprintf(pszUniqueId, _T("%u_%X"), ::GetCurrentProcessId(), ::GetTickCount());
         }
     };
 
@@ -1085,7 +1108,7 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
                         pUCS2 = NULL;
 
                         getTempPath(szTempPath);
-                        getProcId(szNum);
+                        getUniqueId(szUniqueId);
 
                         const TCHAR* pszExt = cszFileName + lstrlen(cszFileName);
                         while ( --pszExt >= cszFileName )
@@ -1107,7 +1130,7 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
                         temp_file += szTempPath;
                         temp_file += tt->pDlg->GetEditorShortName();
                         temp_file += _T("_inp_"); 
-                        temp_file += szNum;
+                        temp_file += szUniqueId;
                         if ( pszExt != NULL )
                             temp_file += pszExt; // original file extension
 
@@ -1147,7 +1170,7 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
     if ( !tt->pDlg->GetOptions().getBool(CTagsDlg::OPT_CTAGS_OUTPUTSTDOUT) )
     {
         getTempPath(szTempPath);
-        getProcId(szNum);
+        getUniqueId(szUniqueId);
 
         // generating unique temp file name
         auto& temp_file = tt->temp_output_file;
@@ -1156,7 +1179,7 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
         temp_file += szTempPath;
         temp_file += tt->pDlg->GetEditorShortName();
         temp_file += _T("tags_"); 
-        temp_file += szNum;
+        temp_file += szUniqueId;
         temp_file += _T(".txt");
     }
 }
@@ -1207,13 +1230,10 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName)
 
         createTempFilesIfNeeded(cszFileName, tt);
 
-        if ( !tt->temp_output_file.empty() )
+        if ( tt->temp_output_file != m_ctagsTempOutputFilePath )
         {
-            if ( tt->temp_output_file != m_ctagsTempOutputFilePath )
-            {
-                removeCtagsTempOutputFile();
-                m_ctagsTempOutputFilePath = tt->temp_output_file;
-            }
+            removeCtagsTempOutputFile();
+            m_ctagsTempOutputFilePath = tt->temp_output_file;
         }
 
         // ctags command line:
