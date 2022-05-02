@@ -1,6 +1,7 @@
 #include "OptionsManager.h"
 #include "c_base/HexStr.h"
 #include <climits>
+#include <memory>
 
 COption::COption() : _uintData(0), _type(0)
 {
@@ -577,15 +578,11 @@ bool CIniOptionsReaderWriter::readDataOption(COptionsManager::opt_itr itr)
         if ( len > 0 )
         {
             len = 2 + len/(2*sizeof(TCHAR));
-            BYTE* buf = new BYTE[len];
-            if ( buf )
-            {
-                len = c_base::_thexstr2buf( str, buf, len );
-                itr->setData( (const void *) buf, len );
-                delete [] buf;
+            std::unique_ptr<BYTE[]> buf(new BYTE[len]);
+            len = c_base::_thexstr2buf( str, buf.get(), len );
+            itr->setData( buf.get(), len );
 
-                return true;
-            }
+            return true;
         }
         else
         {

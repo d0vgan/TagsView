@@ -77,6 +77,9 @@ void CTagsResultParser::Parse(const char* s, tags_map& m)
 {
     m.clear();
 
+    if ( !s )
+        return;
+
     enum eParseState {
         EPS_TAGNAME = 0,
         EPS_TAGFILEPATH,
@@ -109,7 +112,7 @@ void CTagsResultParser::Parse(const char* s, tags_map& m)
                 pn = strchr(s, '\n');
                 if ( pn == NULL )
                 {
-                    pn = s + strlen(s) + 1;
+                    pn = s + strlen(s); // position of the trailing '\0'
                 }
                 if ( *s == '!' )
                 {
@@ -249,36 +252,4 @@ void CTagsResultParser::Parse(const char* s, tags_map& m)
         if ( s != NULL )
             ++s;
     }
-}
-
-char* CTagsResultParser::newUnicodeToPseudoChar(const wchar_t* ws, int wlen , int* plen )
-{
-    if ( wlen < 0 )
-    {
-        wlen = ws ? static_cast<int>(wcslen(ws)) : 0;
-    }
-
-    if ( wlen > 0 )
-    {
-        char* s = new char[2*wlen + 1];
-        if ( s )
-        {
-            int len = 0;
-            for ( int i = 0; i < wlen; i++ )
-            {
-                const wchar_t wch = ws[i] & 0xFF00;
-                if ( wch != 0 )
-                {
-                    s[len++] = (char) ((wch >> 8) & 0x00FF);
-                }
-                s[len++] = (char) (ws[i] & 0x00FF);
-            }
-            s[len] = 0;
-            if ( plen )  *plen = len;
-            return s;
-        }
-    }
-
-    if ( plen )  *plen = 0;
-    return NULL;
 }

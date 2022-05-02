@@ -2,6 +2,7 @@
 #include "SysUniConv.h"
 #include "ConsoleOutputRedirector.h"
 #include "resource.h"
+#include <memory>
 
 typedef struct sCTagsThreadParam {
     CTagsDlg* pDlg { nullptr };
@@ -464,7 +465,7 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
 
     if ( tt->pDlg->GetHwnd() )
     {
-        char* pTempTags = NULL;
+        std::unique_ptr<char[]> pTempTags;
 
         if ( tt->temp_output_file.empty() )
         {
@@ -486,15 +487,15 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
                 DWORD dwSizeLow = ::GetFileSize(hFile, &dwSize);
 
                 dwSize = 0;
-                pTempTags = new char[dwSizeLow + 1];
-                if ( ::ReadFile(hFile, pTempTags, dwSizeLow, &dwSize, NULL) && (dwSizeLow == dwSize) )
+                pTempTags.reset(new char[dwSizeLow + 1]);
+                if ( ::ReadFile(hFile, pTempTags.get(), dwSizeLow, &dwSize, NULL) && (dwSizeLow == dwSize) )
                 {
                     pTempTags[dwSizeLow] = 0;
                 }
                 else
                 {
-                    delete [] pTempTags;
-                    pTempTags = NULL;
+                    char* ptr = pTempTags.release();
+                    delete [] ptr;
                 }
 
                 ::CloseHandle(hFile);
@@ -517,15 +518,12 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
                     if ( tt->temp_output_file.empty() )
                         tt->pDlg->OnAddTags( cor.GetOutputString().c_str(), tt->isUTF8 );
                     else
-                        tt->pDlg->OnAddTags( pTempTags, tt->isUTF8 );
+                        tt->pDlg->OnAddTags( pTempTags.get(), tt->isUTF8 );
 
                     bTagsAdded = true;
                 }
             }
         }
-
-        if ( pTempTags != NULL )
-            delete [] pTempTags;
     }
 
     if ( !tt->temp_input_file.empty() )
@@ -1071,10 +1069,10 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
         else if ( dwSizeLow > 2 )
         {
             int lenUCS2 = (dwSizeLow - 2)/2; // skip 2 leading BOM bytes
-            wchar_t* pUCS2 = new wchar_t[lenUCS2 + 1];
+            std::unique_ptr<wchar_t[]> pUCS2(new wchar_t[lenUCS2 + 1]);
 
             dwSize = 0;
-            if ( ::ReadFile(hFile, pUCS2, 2*lenUCS2, &dwSize, NULL) )
+            if ( ::ReadFile(hFile, pUCS2.get(), 2*lenUCS2, &dwSize, NULL) )
             {
                 if ( dwSize == 2*lenUCS2 )
                 {
@@ -1084,8 +1082,8 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
                     if ( enc == enc_UCS2_BE )
                     {
                         // swap high and low bytes
-                        wchar_t* p = pUCS2;
-                        const wchar_t* pEnd = pUCS2 + lenUCS2;
+                        wchar_t* p = pUCS2.get();
+                        const wchar_t* pEnd = pUCS2.get() + lenUCS2;
                         while ( p < pEnd )
                         {
                             const wchar_t wch = *p;
@@ -1095,17 +1093,17 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
                     }
                     pUCS2[lenUCS2] = 0;
 
-                    int lenUTF8 = ::WideCharToMultiByte(CP_UTF8, 0, pUCS2, lenUCS2, NULL, 0, NULL, NULL);
+                    int lenUTF8 = ::WideCharToMultiByte(CP_UTF8, 0, pUCS2.get(), lenUCS2, NULL, 0, NULL, NULL);
                     if ( lenUTF8 > 0 )
                     {
-                        char* pUTF8 = new char[lenUTF8 + 1];
+                        std::unique_ptr<char[]> pUTF8(new char[lenUTF8 + 1]);
 
                         pUTF8[0] = 0;
-                        ::WideCharToMultiByte(CP_UTF8, 0, pUCS2, lenUCS2, pUTF8, lenUTF8 + 1, NULL, NULL);
+                        ::WideCharToMultiByte(CP_UTF8, 0, pUCS2.get(), lenUCS2, pUTF8.get(), lenUTF8 + 1, NULL, NULL);
                         pUTF8[lenUTF8] = 0;
 
-                        delete [] pUCS2;
-                        pUCS2 = NULL;
+                        wchar_t* ptr = pUCS2.release();
+                        delete [] ptr;
 
                         getTempPath(szTempPath);
                         getUniqueId(szUniqueId);
@@ -1143,7 +1141,7 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
                             */
 
                             dwSize = 0;
-                            if ( ::WriteFile(hTempFile, pUTF8, lenUTF8, &dwSize, NULL) )
+                            if ( ::WriteFile(hTempFile, pUTF8.get(), lenUTF8, &dwSize, NULL) )
                             {
                                 if ( dwSize == lenUTF8 )
                                 {
@@ -1153,14 +1151,9 @@ static void createTempFilesIfNeeded(LPCTSTR cszFileName, tCTagsThreadParam* tt)
 
                             ::CloseHandle(hTempFile);
                         }
-
-                        delete [] pUTF8;
                     }
                 }
             }
-
-            if ( pUCS2 != NULL )
-                delete [] pUCS2;
         }
 
         if ( hFile != NULL )

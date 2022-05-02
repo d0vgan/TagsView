@@ -44,9 +44,6 @@ class CTagsResultParser
 
         static void DelDupSpaces(string& s);
         static void Parse(const char* s, tags_map& m);
-
-        static char* newUnicodeToPseudoChar(const wchar_t* ws, int wlen = -1, int* plen = 0);
-        // use delete[] to free the allocated memory
 };
 
 //---------------------------------------------------------------------------
