@@ -97,7 +97,7 @@ class CTagsViewPlugin : public CWinApp, public CEditorWrapper
         virtual bool ewGetEditorColors(sEditorColors& colors) const override;
 
         // close TagsView dialog
-        virtual void ewOnTagsViewClose() override;
+        virtual void ewCloseTagsView() override;
 
         // navigate backward in current file
         // may be overridden if needed

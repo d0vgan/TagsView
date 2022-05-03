@@ -123,6 +123,7 @@ class CTagsDlg : public CDialog
         enum eMsg {
             /*WM_ADDTAGS         = (WM_USER + 7001),*/
             WM_UPDATETAGSVIEW  = (WM_USER + 7010),
+            WM_CLOSETAGSVIEW   = (WM_USER + 7020),
             WM_CTAGSPATHFAILED = (WM_USER + 7050)
         };
 
@@ -244,6 +245,7 @@ class CTagsDlg : public CDialog
         HINSTANCE GetInstDll() { return m_hInstDll; }
 
         void ApplyColors();
+        void ClearItems();
 
     protected:
         virtual INT_PTR DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
@@ -264,6 +266,7 @@ class CTagsDlg : public CDialog
 
         void initTooltips();
 
+        void deleteAllItems(bool bDelayedRedraw);
         int addListViewItem(int nItem, const CTagsResultParser::tTagData& tagData);
         HTREEITEM addTreeViewItem(HTREEITEM hParent, const CTagsResultParser::tTagData& tagData);
         bool isTagMatchFilter(const string& tagName);

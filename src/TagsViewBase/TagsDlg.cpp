@@ -599,6 +599,21 @@ INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             UpdateTagsView();
             return 0;
 
+        case WM_CLOSETAGSVIEW:
+            if ( m_opt.getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
+            {
+                DeleteTempFile(m_ctagsTempInputFilePath);
+            }
+            if ( m_opt.getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
+            {
+                DeleteTempFile(m_ctagsTempOutputFilePath);
+            }
+            if ( m_pEdWr )
+            {
+                m_pEdWr->ewCloseTagsView();
+            }
+            return 0;
+
         case WM_CTAGSPATHFAILED:
             if ( m_pEdWr )
             {
@@ -632,7 +647,7 @@ void CTagsDlg::EndDialog(INT_PTR nResult)
 
     if ( m_pEdWr )
     {
-        m_pEdWr->ewOnTagsViewClose();
+        m_pEdWr->ewCloseTagsView();
     }
 }
 
@@ -677,18 +692,7 @@ BOOL CTagsDlg::OnCommand(WPARAM wParam, LPARAM lParam)
             break;
 
         case IDM_CLOSE:
-            if ( m_pEdWr )
-            {
-                m_pEdWr->ewOnTagsViewClose();
-            }
-            if ( m_opt.getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
-            {
-                DeleteTempFile(m_ctagsTempInputFilePath);
-            }
-            if ( m_opt.getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
-            {
-                DeleteTempFile(m_ctagsTempOutputFilePath);
-            }
+            PostMessage(WM_CLOSETAGSVIEW);
             break;
     }
 
@@ -994,7 +998,7 @@ void CTagsDlg::OnParseClicked()
 {
     if ( m_pEdWr )
     {
-        //m_pEdWr->ewClearNavigationHistory(false);
+        m_pEdWr->ewClearNavigationHistory(false);
         m_pEdWr->ewDoParseFile();
     }
 }
@@ -1261,15 +1265,7 @@ namespace
 void CTagsDlg::ParseFile(const TCHAR* const cszFileName)
 {
     m_csTagsItems.Lock();
-
-        m_lvTags.SetRedraw(FALSE);
-        m_lvTags.DeleteAllItems();
-        m_lvTags.SetRedraw(TRUE);
-
-        m_tvTags.SetRedraw(FALSE);
-        m_tvTags.DeleteAllItems();
-        m_tvTags.SetRedraw(TRUE);
-
+        deleteAllItems(true);
     m_csTagsItems.Release();
 
     m_tbButtons.SetButtonState(IDM_PREVPOS, 0);
@@ -1586,6 +1582,31 @@ LPCTSTR CTagsDlg::GetEditorShortName() const
     return ( m_pEdWr ? m_pEdWr->ewGetEditorShortName() : _T("") );
 }
 
+void CTagsDlg::deleteAllItems(bool bDelayedRedraw)
+{
+    if ( m_lvTags.IsWindow() )
+    {
+        if ( bDelayedRedraw )
+            m_lvTags.SetRedraw(FALSE);
+
+        m_lvTags.DeleteAllItems();
+
+        if ( bDelayedRedraw )
+            m_lvTags.SetRedraw(TRUE);
+    }
+
+    if ( m_tvTags.IsWindow() )
+    {
+        if ( bDelayedRedraw )
+            m_tvTags.SetRedraw(FALSE);
+
+        m_tvTags.DeleteAllItems();
+
+        if ( bDelayedRedraw )
+            m_tvTags.SetRedraw(TRUE);
+    }
+}
+
 int CTagsDlg::addListViewItem(int nItem, const CTagsResultParser::tTagData& tagData)
 {
     int    n = -1;
@@ -1699,6 +1720,11 @@ void CTagsDlg::ApplyColors()
     }
 }
 
+void CTagsDlg::ClearItems()
+{
+    deleteAllItems(false);
+}
+
 void CTagsDlg::checkCTagsExePath()
 {
     if ( !isFilePathExist(m_ctagsExeFilePath.c_str(), false) )
@@ -1802,10 +1828,7 @@ bool CTagsDlg::isTagMatchFilter(const string& tagName)
 void CTagsDlg::sortTagsByLine()
 {
     m_csTagsItems.Lock();
-
-        m_lvTags.DeleteAllItems();
-        m_tvTags.DeleteAllItems();
-
+        deleteAllItems(false);
     m_csTagsItems.Release();
 
     int nItem = 0;
@@ -1826,10 +1849,7 @@ void CTagsDlg::sortTagsByLine()
 void CTagsDlg::sortTagsByName()
 {
     m_csTagsItems.Lock();
-
-        m_lvTags.DeleteAllItems();
-        m_tvTags.DeleteAllItems();
-
+        deleteAllItems(false);
     m_csTagsItems.Release();
 
     string s;
@@ -1897,10 +1917,7 @@ void CTagsDlg::sortTagsByName()
 void CTagsDlg::sortTagsByType()
 {
     m_csTagsItems.Lock();
-
-        m_lvTags.DeleteAllItems();
-        m_tvTags.DeleteAllItems();
-
+        deleteAllItems(false);
     m_csTagsItems.Release();
 
     multimap<string, CTagsResultParser::tTagData> tagsMap;

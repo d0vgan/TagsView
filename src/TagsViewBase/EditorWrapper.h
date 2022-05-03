@@ -54,7 +54,7 @@ class IEditorWrapper
         virtual bool ewGetEditorColors(sEditorColors& colors) const = 0;
 
         // close TagsView dialog
-        virtual void ewOnTagsViewClose() = 0;
+        virtual void ewCloseTagsView() = 0;
 };
 
 class CTagsDlg;
@@ -226,8 +226,10 @@ class CEditorWrapper : public IEditorWrapper
 
         t_navmap::const_iterator getNavItr(const t_string& filePathName) const;
         t_navmap::iterator getNavItr(const t_string& filePathName);
+        void clearNavItem(const t_string& filePathName, bool bEraseItem);
 
         const t_string& getCurrentFilePathName();
+        void clearCurrentFilePathName();
 
     protected:
         CTagsDlg* m_pDlg;

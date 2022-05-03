@@ -482,10 +482,12 @@ bool CTagsViewPlugin::ewGetEditorColors(sEditorColors& colors) const
     return (nValuesRead == 2);
 }
 
-void CTagsViewPlugin::ewOnTagsViewClose()
+void CTagsViewPlugin::ewCloseTagsView()
 {
     ewClearNavigationHistory(true);
+    clearCurrentFilePathName();
     Uninitialize(false);
+    GetTagsDlg().ClearItems();
 }
 
 void CTagsViewPlugin::ewDoNavigateBackward()
@@ -669,9 +671,9 @@ void CTagsViewPlugin::DockTagsDlg()
 
 // global vars
 CTagsViewPlugin thePlugin;
-bool g_isClosing = false;
+bool g_isClosing = false; // closing a document or exiting AkelPad
 bool g_isOpeningDocument = false;
-bool g_isOpeningSession = false;
+bool g_isAkelPadStarting = false;
 bool g_isMainWindowShown = false;
 
 
@@ -718,8 +720,7 @@ extern "C" void __declspec(dllexport) TagsView(PLUGINDATA *pd)
     // Is plugin already loaded?
     if ( thePlugin.bInitialized && thePlugin.bTagsDlgVisible )
     {
-        thePlugin.ewClearNavigationHistory(true);
-        thePlugin.Uninitialize(false);
+        thePlugin.ewCloseTagsView();
         pd->nUnload = UD_NONUNLOAD_NONACTIVE;
         return;
     }
@@ -783,6 +784,11 @@ extern "C" void __declspec(dllexport) Settings(PLUGINDATA *pd)
 
     thePlugin.Initialize(pd);
 
+    if ( !pd->bOnStart )
+    {
+        g_isMainWindowShown = true;
+    }
+
     CSettingsDlg dlg(thePlugin.GetTagsDlg().GetOptions());
     dlg.DoModal(thePlugin.ewGetMainHwnd());
 
@@ -804,7 +810,7 @@ extern "C" BOOL WINAPI DllMain(HINSTANCE hInstDLL, DWORD dwReason, LPVOID lpRese
         case DLL_PROCESS_ATTACH:
             g_isClosing = false;
             g_isOpeningDocument = false;
-            g_isOpeningSession = false;
+            g_isAkelPadStarting = false;
             g_isMainWindowShown = false;
             thePlugin.SetResourceHandle(hInstDLL);
             break;
@@ -885,7 +891,7 @@ LRESULT CALLBACK NewFrameProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                     if ( thePlugin.pFrameProcData && thePlugin.pFrameProcData->NextProc )
                         lResult = thePlugin.pFrameProcData->NextProc(hWnd, uMsg, wParam, lParam);
 
-                    if ( g_isMainWindowShown && !g_isOpeningSession && !g_isOpeningDocument )
+                    if ( g_isMainWindowShown && !g_isAkelPadStarting && !g_isOpeningDocument )
                         thePlugin.ewOnSelectionChanged();
 
                     return lResult;
@@ -910,7 +916,7 @@ LRESULT CALLBACK NewMainProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case WM_NOTIFY:
             if ( !g_isClosing )
             {
-                NMHDR* pnmh = (NMHDR*)lParam;
+                NMHDR* pnmh = (NMHDR*) lParam;
                 if ( pnmh->code == EN_SELCHANGE )
                 {
                     LRESULT lResult = 0;
@@ -918,7 +924,7 @@ LRESULT CALLBACK NewMainProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     if ( thePlugin.pMainProcData && thePlugin.pMainProcData->NextProc)
                         lResult = thePlugin.pMainProcData->NextProc(hWnd, uMsg, wParam, lParam);
 
-                    if ( g_isMainWindowShown && g_isOpeningSession && !g_isOpeningDocument )
+                    if ( g_isMainWindowShown && !g_isAkelPadStarting && !g_isOpeningDocument )
                         thePlugin.ewOnSelectionChanged();
 
                     return lResult;
@@ -969,7 +975,7 @@ LRESULT CALLBACK NewMainProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 if ( thePlugin.pMainProcData && thePlugin.pMainProcData->NextProc)
                     lResult = thePlugin.pMainProcData->NextProc(hWnd, uMsg, wParam, lParam);
 
-                if ( g_isMainWindowShown && !g_isOpeningSession )
+                if ( g_isMainWindowShown && !g_isAkelPadStarting )
                 {
                     thePlugin.ewOnFileActivated();
                 }
@@ -991,7 +997,7 @@ LRESULT CALLBACK NewMainProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     lResult = thePlugin.pMainProcData->NextProc(hWnd, uMsg, wParam, lParam);
 
                 g_isOpeningDocument = false;
-                if ( g_isMainWindowShown && !g_isOpeningSession )
+                if ( g_isMainWindowShown && !g_isAkelPadStarting )
                 {
                     thePlugin.ewOnFileOpened();
                 }
@@ -1046,17 +1052,23 @@ LRESULT CALLBACK NewMainProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return lResult;
         }
 
+        case AKDN_MAIN_ONSTART_PRESHOW:
+            g_isAkelPadStarting = true;
+            break;
+
         case AKDN_MAIN_ONSTART_SHOW:
+            g_isAkelPadStarting = true;
+            g_isMainWindowShown = true;
+            break;
+
+        case AKDN_MAIN_ONSTART_FINISH:
         {
             LRESULT lResult = 0;
-
-            g_isMainWindowShown = true;
-            g_isOpeningSession = true;
 
             if ( thePlugin.pMainProcData && thePlugin.pMainProcData->NextProc)
                 lResult = thePlugin.pMainProcData->NextProc(hWnd, uMsg, wParam, lParam);
 
-            g_isOpeningSession = false;
+            g_isAkelPadStarting = false;
             thePlugin.ewOnFileOpened();
 
             return lResult;

@@ -40,12 +40,7 @@ void CEditorWrapper::ewClearNavigationHistory(bool bAllFiles)
     }
     else // current file
     {
-        t_navmap::iterator itr = getNavItr( getCurrentFilePathName() );
-        if ( itr != m_navMap.end() )
-        {
-            itr->second.Clear();
-            m_navMap.erase(itr);
-        }
+        clearNavItem(getCurrentFilePathName(), true);
     }
     if ( m_pDlg && m_pDlg->GetHwnd() )
     {
@@ -114,6 +109,19 @@ CEditorWrapper::t_navmap::iterator CEditorWrapper::getNavItr(const t_string& fil
     return m_navMap.end();
 }
 
+void CEditorWrapper::clearNavItem(const t_string& filePathName, bool bEraseItem)
+{
+    t_navmap::iterator itr = getNavItr(filePathName);
+    if ( itr != m_navMap.end() )
+    {
+        itr->second.Clear();
+        if ( bEraseItem )
+        {
+            m_navMap.erase(itr);
+        }
+    }
+}
+
 const CEditorWrapper::t_string& CEditorWrapper::getCurrentFilePathName()
 {
     if ( m_currentFilePathName.empty() )
@@ -121,6 +129,11 @@ const CEditorWrapper::t_string& CEditorWrapper::getCurrentFilePathName()
         m_currentFilePathName = ewGetFilePathName();
     }
     return m_currentFilePathName;
+}
+
+void CEditorWrapper::clearCurrentFilePathName()
+{
+    m_currentFilePathName.clear();
 }
 
 CEditorWrapper::t_string CEditorWrapper::ewGetNavigateBackwardHint()
@@ -167,12 +180,7 @@ void CEditorWrapper::ewOnFileActivated()
 
 void CEditorWrapper::ewOnFileClosed()
 {
-    t_navmap::iterator itr = getNavItr(m_currentFilePathName);
-    if ( itr != m_navMap.end() )
-    {
-        itr->second.Clear();
-        m_navMap.erase(itr);
-    }
+    clearNavItem(m_currentFilePathName, true);
     m_currentFilePathName.clear();
     if ( m_pDlg && m_pDlg->GetHwnd() && m_pDlg->IsWindowVisible() )
     {
@@ -186,12 +194,7 @@ void CEditorWrapper::ewOnFileOpened()
     if ( m_currentFilePathName != filePathName )
     {
         m_currentFilePathName = filePathName;
-
-        t_navmap::iterator itr = getNavItr(m_currentFilePathName);
-        if ( itr != m_navMap.end() )
-        {
-            itr->second.Clear();
-        }
+        clearNavItem(m_currentFilePathName, false);
 
         ewDoParseFile();
     }
@@ -200,11 +203,7 @@ void CEditorWrapper::ewOnFileOpened()
 void CEditorWrapper::ewOnFileReloaded()
 {
     const t_string filePathName = ewGetFilePathName();
-    t_navmap::iterator itr = getNavItr(filePathName);
-    if ( itr != m_navMap.end() )
-    {
-        itr->second.Clear();
-    }
+    clearNavItem(filePathName, false);
 
     if ( filePathName == getCurrentFilePathName() )
     {
@@ -219,6 +218,7 @@ void CEditorWrapper::ewOnFileSaved()
     {
         if ( m_pDlg->GetOptions().getBool(CTagsDlg::OPT_BEHAVIOR_PARSEONSAVE) )
         {
+            clearNavItem(filePathName, false);
             ewDoParseFile();
         }
     }

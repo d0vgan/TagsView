@@ -124,9 +124,9 @@ bool CTagsViewPlugin::ewGetEditorColors(sEditorColors& colors) const
     return true;
 }
 
-void CTagsViewPlugin::ewOnTagsViewClose()
+void CTagsViewPlugin::ewCloseTagsView()
 {
-    ewClearNavigationHistory(true);
+    OnHideTagsDlg();
 
     if ( GetTagsDlg().GetHwnd() )
     {
@@ -251,6 +251,13 @@ void CTagsViewPlugin::OnNppTBModification()
       (LPARAM) &m_TB_Icon );
 }
 
+void CTagsViewPlugin::OnHideTagsDlg()
+{
+    ewClearNavigationHistory(true);
+    clearCurrentFilePathName();
+    GetTagsDlg().ClearItems();
+}
+
 void CTagsViewPlugin::Initialize(HINSTANCE hInstance)
 {
     TCHAR szCurDir[2*MAX_PATH];
@@ -333,8 +340,6 @@ void funcTagsView()
         UINT uMsg = NPPM_DMMSHOW;
         if ( thePlugin.GetTagsDlg().IsWindowVisible() )
         {
-            thePlugin.ewClearNavigationHistory(true);
-
             uMsg = NPPM_DMMHIDE;
             bParseFile = false;
         }
@@ -344,9 +349,14 @@ void funcTagsView()
         }
 
         thePlugin.SendNppMsg( uMsg, 0, (LPARAM) dockData.hClient );
+
         if ( uMsg == NPPM_DMMSHOW )
         {
             thePlugin.GetTagsDlg().ApplyColors();
+        }
+        else
+        {
+            thePlugin.OnHideTagsDlg();
         }
     }
     else

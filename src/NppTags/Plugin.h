@@ -109,7 +109,7 @@ class CTagsViewPlugin : public CWinApp, public CEditorWrapper
         virtual bool ewGetEditorColors(sEditorColors& colors) const override;
 
         // close TagsView dialog
-        virtual void ewOnTagsViewClose() override;
+        virtual void ewCloseTagsView() override;
 
         const CTagsDlg& GetTagsDlg() const { return m_tagsDlg; }
         CTagsDlg& GetTagsDlg() { return m_tagsDlg; }
@@ -125,6 +125,8 @@ class CTagsViewPlugin : public CWinApp, public CEditorWrapper
         void OnNppReady();
         void OnNppShutdown();
         void OnNppTBModification();
+
+        void OnHideTagsDlg();
 
         void Initialize(HINSTANCE hInstance);
         void Uninitialize();
