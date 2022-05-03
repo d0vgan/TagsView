@@ -245,7 +245,7 @@ class CTagsDlg : public CDialog
         HINSTANCE GetInstDll() { return m_hInstDll; }
 
         void ApplyColors();
-        void ClearItems();
+        void ClearItems(bool bDelayedRedraw = false);
 
     protected:
         virtual INT_PTR DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;

@@ -300,6 +300,22 @@ void CTagsViewPlugin::ewDoSetSelection(int selStart, int selEnd)
     cr.cpMax = selEnd;
 
     HWND hEdit = ewGetEditHwnd();
+    int firstVisLine = 0;
+    int lastVisLine = 0;
+    int selLine = 0;
+
+    if ( bAkelEdit )
+    {
+        firstVisLine = (int) ::SendMessage( hEdit, AEM_GETLINENUMBER, AEGL_FIRSTVISIBLELINE, 0 );
+        lastVisLine = (int) ::SendMessage( hEdit, AEM_GETLINENUMBER, AEGL_LASTVISIBLELINE, 0 );
+        selLine = (int) ::SendMessage( hEdit, AEM_GETLINENUMBER, AEGL_LINEFROMRICHOFFSET, cr.cpMin );
+        if ( selLine > firstVisLine && selLine < lastVisLine - 1 )
+        {
+            ::SendMessage( hEdit, EM_EXSETSEL, 0, (LPARAM) &cr );
+            return;
+        }
+    }
+
     ::SendMessage( hEdit, WM_SETREDRAW, (WPARAM) FALSE, 0 );
     ::SendMessage( hEdit, EM_EXSETSEL, 0, (LPARAM) &cr );
     if ( bAkelEdit )
@@ -308,15 +324,15 @@ void CTagsViewPlugin::ewDoSetSelection(int selStart, int selEnd)
 
         stp.dwFlags = AESC_POINTCARET | AESC_OFFSETCHARX | AESC_OFFSETCHARY | AESC_FORCETOP;
         stp.nOffsetX = 3;
-        stp.nOffsetY = 2;
+        stp.nOffsetY = (lastVisLine - firstVisLine)/12;
         SendMessage( hEdit, AEM_SCROLLTOPOINT, 0, (LPARAM) &stp );
 
     }
     else
     {
-        int currentLine = (int) ::SendMessage( hEdit, EM_EXLINEFROMCHAR, 0, cr.cpMin );
-        int firstLine = (int) ::SendMessage( hEdit, EM_GETFIRSTVISIBLELINE, 0, 0 );
-        ::SendMessage( hEdit, EM_LINESCROLL, 0, (currentLine - firstLine) );
+        selLine = (int) ::SendMessage( hEdit, EM_EXLINEFROMCHAR, 0, cr.cpMin );
+        firstVisLine = (int) ::SendMessage( hEdit, EM_GETFIRSTVISIBLELINE, 0, 0 );
+        ::SendMessage( hEdit, EM_LINESCROLL, 0, (selLine - firstVisLine) );
     }
     ::SendMessage( hEdit, WM_SETREDRAW, (WPARAM) TRUE, 0 );
     ::InvalidateRect( hEdit, NULL, TRUE );

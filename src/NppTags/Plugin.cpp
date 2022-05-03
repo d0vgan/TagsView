@@ -52,15 +52,22 @@ void CTagsViewPlugin::ewDoSetSelection(int selStart, int selEnd)
 {
     const HWND hSciEdit = ewGetEditHwnd();
     const int line = (int) ::SendMessage( hSciEdit, SCI_LINEFROMPOSITION, selStart, 0 );
+    int firstLine = (int) ::SendMessage( hSciEdit, SCI_GETFIRSTVISIBLELINE, 0, 0 );
+    int visibleLines = (int) ::SendMessage( hSciEdit, SCI_LINESONSCREEN, 0, 0 );
+    if ( line > firstLine && line < firstLine + visibleLines - 1 )
+    {
+        ::SendMessage( hSciEdit, SCI_SETSEL, selStart, selEnd );
+        return;
+    }
+
+    int offset = -visibleLines/12;
+    if ( firstLine < line )
+        offset = visibleLines - 1 + offset;
+
     ::SendMessage( hSciEdit, WM_SETREDRAW, (WPARAM) FALSE, 0 );
     ::SendMessage( hSciEdit, SCI_SETSEL, selStart, selEnd );
     ::SendMessage( hSciEdit, SCI_GOTOLINE, line, 0 );
-    int firstLine = (int) ::SendMessage( hSciEdit, SCI_GETFIRSTVISIBLELINE, 0, 0 );
-    if ( firstLine < line )
-        firstLine = line - firstLine - 2;
-    else
-        firstLine = -2;
-    ::SendMessage( hSciEdit, SCI_LINESCROLL, 0, firstLine );
+    ::SendMessage( hSciEdit, SCI_LINESCROLL, 0, offset );
     ::SendMessage( hSciEdit, WM_SETREDRAW, (WPARAM) TRUE, 0 );
     ::InvalidateRect( hSciEdit, NULL, TRUE );
     ::UpdateWindow( hSciEdit );

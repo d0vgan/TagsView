@@ -1264,14 +1264,7 @@ namespace
 
 void CTagsDlg::ParseFile(const TCHAR* const cszFileName)
 {
-    m_csTagsItems.Lock();
-        deleteAllItems(true);
-    m_csTagsItems.Release();
-
-    m_tbButtons.SetButtonState(IDM_PREVPOS, 0);
-    m_tbButtons.SetButtonState(IDM_NEXTPOS, 0);
-
-    m_prevSelStart = -1;
+    ClearItems(true);
 
     if ( cszFileName && cszFileName[0] &&
          ::GetFileAttributes(cszFileName) != INVALID_FILE_ATTRIBUTES )
@@ -1720,9 +1713,19 @@ void CTagsDlg::ApplyColors()
     }
 }
 
-void CTagsDlg::ClearItems()
+void CTagsDlg::ClearItems(bool bDelayedRedraw )
 {
-    deleteAllItems(false);
+    m_csTagsItems.Lock();
+        deleteAllItems(bDelayedRedraw);
+    m_csTagsItems.Release();
+
+    if ( m_tbButtons.IsWindow() )
+    {
+        m_tbButtons.SetButtonState(IDM_PREVPOS, 0);
+        m_tbButtons.SetButtonState(IDM_NEXTPOS, 0);
+    }
+
+    m_prevSelStart = -1;
 }
 
 void CTagsDlg::checkCTagsExePath()

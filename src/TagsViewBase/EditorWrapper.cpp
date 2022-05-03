@@ -89,6 +89,10 @@ void CEditorWrapper::ewDoParseFile()
         if ( m_pDlg->GetHwnd() && m_pDlg->IsWindowVisible() )
             m_pDlg->ParseFile( getCurrentFilePathName().c_str() );
     }
+    else
+    {
+        m_pDlg->ClearItems(true);
+    }
 }
 
 CEditorWrapper::t_navmap::const_iterator CEditorWrapper::getNavItr(const t_string& filePathName) const
