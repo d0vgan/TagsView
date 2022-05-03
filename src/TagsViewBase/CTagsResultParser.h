@@ -42,7 +42,7 @@ class CTagsResultParser
 
         typedef multimap<int, tTagData> tags_map;
 
-        static void DelDupSpaces(string& s);
+        static void DelExtraSpaces(string& s);
         static void Parse(const char* s, tags_map& m);
 };
 

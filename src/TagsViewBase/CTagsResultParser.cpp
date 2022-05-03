@@ -41,11 +41,50 @@ namespace
     }
 }
 
-void CTagsResultParser::DelDupSpaces(string& s)
+void CTagsResultParser::DelExtraSpaces(string& s)
 {
-    string::size_type pos = 0;
-    string::size_type n = 0;
+    if ( s.empty() )
+        return;
 
+    // 1. removing the trailing spaces
+    string::size_type n = 0;
+    string::size_type pos = s.length() - 1;
+    while ( s[pos] == ' ' )
+    {
+        ++n;
+        if ( pos != 0 )
+            --pos;
+        else
+            break;
+    }
+    if ( n != 0 )
+    {
+        s.erase(s.length() - n);
+    }
+
+    if ( s.empty() )
+        return;
+
+    // 2. removing the leading spaces
+    n = 0;
+    pos = s.length(); // end pos
+    while ( s[n] == ' ' )
+    {
+        ++n;
+        if ( n == pos )
+            break;
+    }
+    if ( n != 0 )
+    {
+        s.erase(0, n);
+    }
+
+    if ( s.empty() )
+        return;
+
+    // 3. removing the repeating spaces
+    n = 0;
+    pos = 0;
     while ( pos < s.length() )
     {
         if ( s[pos] == ' ' )
@@ -232,10 +271,10 @@ void CTagsResultParser::Parse(const char* s, tags_map& m)
                 }
 
                 string_replace_all(tagData.tagName, double_backslash, single_backslash);
-                DelDupSpaces(tagData.tagName);
+                DelExtraSpaces(tagData.tagName);
 
                 string_replace_all(tagData.tagPattern, double_backslash, single_backslash);
-                DelDupSpaces(tagData.tagPattern);
+                DelExtraSpaces(tagData.tagPattern);
 
                 itr = m.insert( std::make_pair(tagData.line, tagData) );
                 if ( itr != m.end() )
