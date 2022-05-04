@@ -71,24 +71,24 @@
     <_ProjectFileVersion>15.0.28307.799</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)$(Configuration)\AkelTags_$(Platform)\</OutDir>
-    <IntDir>$(Configuration)\AkelTags_$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)$(Configuration)\AkelTags\32bit\</OutDir>
+    <IntDir>$(Configuration)\AkelTags\32bit\</IntDir>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Configuration)\AkelTags_$(Platform)\</OutDir>
-    <IntDir>$(Configuration)\AkelTags_$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)$(Configuration)\AkelTags\64bit\</OutDir>
+    <IntDir>$(Configuration)\AkelTags\64bit\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)$(Configuration)\AkelTags_$(Platform)\</OutDir>
-    <IntDir>$(Configuration)\AkelTags_$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)$(Configuration)\AkelTags\32bit\</OutDir>
+    <IntDir>$(Configuration)\AkelTags\32bit\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Configuration)\AkelTags_$(Platform)\</OutDir>
-    <IntDir>$(Configuration)\AkelTags_$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)$(Configuration)\AkelTags\64bit\</OutDir>
+    <IntDir>$(Configuration)\AkelTags\64bit\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

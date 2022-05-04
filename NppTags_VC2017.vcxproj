@@ -71,23 +71,23 @@
     <_ProjectFileVersion>15.0.28307.799</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)$(Configuration)\NppTags_$(Platform)\</OutDir>
-    <IntDir>$(Configuration)\NppTags_$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)$(Configuration)\NppTags\32bit\</OutDir>
+    <IntDir>$(Configuration)\NppTags\32bit\</IntDir>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)$(Configuration)\NppTags_$(Platform)\</OutDir>
-    <IntDir>$(Configuration)\NppTags_$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)$(Configuration)\NppTags\64bit\</OutDir>
+    <IntDir>$(Configuration)\NppTags\64bit\</IntDir>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)$(Configuration)\NppTags_$(Platform)\</OutDir>
-    <IntDir>$(Configuration)\NppTags_$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)$(Configuration)\NppTags\32bit\</OutDir>
+    <IntDir>$(Configuration)\NppTags\32bit\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)$(Configuration)\NppTags_$(Platform)\</OutDir>
-    <IntDir>$(Configuration)\NppTags_$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)$(Configuration)\NppTags\64bit\</OutDir>
+    <IntDir>$(Configuration)\NppTags\64bit\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

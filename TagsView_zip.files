@@ -1,0 +1,16 @@
+README.md
+TagsView_History.txt
+TagsView_Readme.txt
+TagsView_zip.bat
+TagsView_zip.files
+*.sln
+*.vcxproj
+*.vcxproj.filters
+Plugin\TagsView\*.*
+src\AkelTags\*.*
+src\NppTags\*.*
+src\TagsViewBase\*.*
+src\TagsViewBase\c_base\*.*
+src\TagsViewBase\cpp_base\*.*
+src\TagsViewBase\res\*.*
+src\TagsViewBase\win32++\include\*.*
