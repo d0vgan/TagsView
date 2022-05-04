@@ -6,7 +6,7 @@ TagsView_zip.files
 *.sln
 *.vcxproj
 *.vcxproj.filters
-Plugin\TagsView\*.*
+Plugin\TagsView\ctags.opt
 src\AkelTags\*.*
 src\NppTags\*.*
 src\TagsViewBase\*.*
