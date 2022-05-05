@@ -5,45 +5,45 @@
 #include <map>
 #include <wchar.h>
 
-using std::string;
-using std::multimap;
-
 class CTagsResultParser
 {
     public:
-        typedef struct sTagData
+        struct tTagData
         {
-            string tagName;
-            string tagPattern;
-            string tagType;
-            string tagScope;
-            int    line;
-            int    end_line;
+            std::string tagName;
+            std::string tagPattern;
+            std::string tagType;
+            std::string tagScope;
+            std::string filePath;
+            int         line;
+            int         end_line;
             union uData {
                 void* p;
                 int   i;
             } data;
             void* pTagData;
 
-            string getFullTagName() const
+            std::string getFullTagName() const
             {
                 if ( tagScope.empty() )
                     return tagName;
 
-                string s;
+                std::string s;
                 s.reserve(tagScope.length() + tagName.length() + 2);
-                s = tagScope;
+                s += tagScope;
                 s += "::";
                 s += tagName;
                 return s;
             }
 
-        } tTagData;
+        };
 
-        typedef multimap<int, tTagData> tags_map;
+        typedef std::multimap<int, tTagData> tags_map;
 
-        static void DelExtraSpaces(string& s);
-        static void Parse(const char* s, tags_map& m);
+        enum eParseFlags {
+            PF_INCLUDEFILEPATH = 0x01
+        };
+        static void Parse(const char* s, tags_map& m, unsigned int nParseFlags = 0);
 };
 
 //---------------------------------------------------------------------------
