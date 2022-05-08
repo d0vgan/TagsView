@@ -1,7 +1,8 @@
 #include "CTagsResultParser.h"
 #include <string.h>
 #include <algorithm>
-#include <cctype>
+#include <vector>
+#include <windows.h>
 
 namespace
 {
@@ -34,6 +35,21 @@ namespace
         }
     }
 
+    inline bool is_space_char(char ch)
+    {
+        switch ( ch )
+        {
+            case '\t':  // 0x09, tabulation
+            case '\n':  // 0x0A, line feed
+            case '\v':  // 0x0B, line tabulation
+            case '\f':  // 0x0C, form feed
+            case '\r':  // 0x0D, carriage return
+            case ' ':   // 0x20, space
+                return true;
+        }
+        return false;
+    }
+
     // deletes the leading, trailing and consecutive spaces
     void delete_extra_spaces(std::string& s)
     {
@@ -43,7 +59,7 @@ namespace
         // 1. condense the spaces
         auto s_begin = std::begin(s);
         auto s_end = std::end(s);
-        auto s_last = std::unique( s_begin, s_end, [](char c1, char c2) { return (std::isspace(c1) && std::isspace(c2)); } );
+        auto s_last = std::unique( s_begin, s_end, [](char c1, char c2) { return (is_space_char(c1) && is_space_char(c2)); } );
         if ( s_last != s_end )
         {
             s.erase(s_last, s_end);
@@ -52,7 +68,7 @@ namespace
         }
 
         // 2. remove the trailing space
-        if ( std::isspace(s.back()) )
+        if ( is_space_char(s.back()) )
         {
             s.pop_back();
             if ( s.empty() )
@@ -60,7 +76,7 @@ namespace
         }
 
         // 3. remove the leading space
-        if ( std::isspace(s.front()) )
+        if ( is_space_char(s.front()) )
         {
             s.erase(0, 1);
         }
@@ -79,11 +95,25 @@ namespace
         string_replace_all(s, escaped_backslash, single_backslash);
         string_replace_all(s, escaped_slash, single_slash);
     }
+
+    CTagsResultParser::t_string to_tstring(const std::string& in, unsigned int nParseFlags, std::vector<TCHAR>& buf)
+    {
+        if ( in.empty() )
+            return CTagsResultParser::t_string();
+
+        UINT uCodePage = (nParseFlags & CTagsResultParser::PF_ISUTF8) ? CP_UTF8 : CP_ACP;
+        int nLen = ::MultiByteToWideChar(uCodePage, 0, in.c_str(), static_cast<int>(in.length()), NULL, 0);
+        buf.reserve(nLen + 1);
+        buf.data()[0] = 0; // just in case
+        ::MultiByteToWideChar(uCodePage, 0, in.c_str(), static_cast<int>(in.length()), buf.data(), nLen + 1);
+        buf.data()[nLen] = 0; // the trailing '\0'
+        return CTagsResultParser::t_string(buf.data(), nLen);
+    }
 }
 
 
 // parses result of "ctags --fields=fKnste"
-void CTagsResultParser::Parse(const char* s, tags_map& m, unsigned int nParseFlags)
+void CTagsResultParser::Parse(const char* s, tags_map& m, unsigned int nParseFlags, std::set<t_string>& relatedFiles)
 {
     m.clear();
 
@@ -102,8 +132,12 @@ void CTagsResultParser::Parse(const char* s, tags_map& m, unsigned int nParseFla
     unsigned char uParseState = EPS_TAGNAME;
     const char* p;
     const char* pn; // pos of the nearest '\n'
-    tTagData tagData;
+    tTagDataInternal tagData;
+    tTagData tagDataOut;
+    std::vector<TCHAR> buf;
     tags_map::iterator itr;
+
+    buf.reserve(200);
 
     while ( *s != 0 )
     {
@@ -113,8 +147,6 @@ void CTagsResultParser::Parse(const char* s, tags_map& m, unsigned int nParseFla
                 tagData.tagScope.clear();
                 tagData.line = -1;
                 tagData.end_line = -1;
-                tagData.data.p = nullptr;
-                tagData.pTagData = nullptr;
 
                 pn = strchr(s, '\n');
                 if ( pn == NULL )
@@ -254,10 +286,24 @@ void CTagsResultParser::Parse(const char* s, tags_map& m, unsigned int nParseFla
                     string_replace_all(tagData.filePath, '/', '\\');
                 }
 
-                itr = m.insert( std::make_pair(tagData.line, tagData) );
+                tagDataOut.tagName    = to_tstring(tagData.tagName, nParseFlags, buf);
+                tagDataOut.tagPattern = to_tstring(tagData.tagPattern, nParseFlags, buf);
+                tagDataOut.tagType    = to_tstring(tagData.tagType, nParseFlags, buf);
+                tagDataOut.tagScope   = to_tstring(tagData.tagScope, nParseFlags, buf);
+                tagDataOut.filePath   = to_tstring(tagData.filePath, nParseFlags, buf);
+                tagDataOut.line       = tagData.line;
+                tagDataOut.end_line   = tagData.end_line;
+                tagDataOut.data.p     = nullptr;
+                tagDataOut.pTagData   = nullptr;
+
+                itr = m.insert( std::make_pair(tagDataOut.line, tagDataOut) );
                 if ( itr != m.end() )
                 {
                     itr->second.pTagData = (void *) &(itr->second);
+                }
+                if ( !tagDataOut.filePath.empty() )
+                {
+                    relatedFiles.insert(tagDataOut.filePath);
                 }
 
                 p = pn;

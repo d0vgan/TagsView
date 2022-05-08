@@ -84,6 +84,7 @@ void CEditorWrapper::ewDoNavigateForward()
 
 void CEditorWrapper::ewDoParseFile()
 {
+    m_relatedFilePaths.clear();
     if ( !getCurrentFilePathName().empty() )
     {
         if ( m_pDlg->GetHwnd() && m_pDlg->IsWindowVisible() )
@@ -138,6 +139,7 @@ const CEditorWrapper::t_string& CEditorWrapper::getCurrentFilePathName()
 void CEditorWrapper::clearCurrentFilePathName()
 {
     m_currentFilePathName.clear();
+    m_relatedFilePaths.clear();
 }
 
 CEditorWrapper::t_string CEditorWrapper::ewGetNavigateBackwardHint()
@@ -172,23 +174,65 @@ bool CEditorWrapper::ewHasNavigationHistory()
     return false;
 }
 
+void CEditorWrapper::ewSetNavigationPoint(const t_string& hint, bool incPos )
+{
+    const t_string filePathName = ewGetFilePathName();
+    if ( filePathName == getCurrentFilePathName() )
+    {
+        int selEnd;
+        int selStart = ewGetSelectionPos(selEnd);
+
+        t_navmap::iterator itr = getNavItr(filePathName);
+        if ( itr != m_navMap.end() )
+        {
+            CNavigationHistory& nh = itr->second;
+            if ( nh.IsEmpty() || (nh.GetLastItem().selPos != selStart) )
+            {
+                nh.Add(selStart, hint, incPos);
+            }
+        }
+        else
+        {
+            CNavigationHistory nh;
+
+            nh.Add(selStart, hint, incPos);
+            m_navMap.insert( std::make_pair(filePathName, nh) );
+        }
+    }
+}
+
 void CEditorWrapper::ewOnFileActivated()
 {
     const t_string filePathName = ewGetFilePathName();
     if ( m_currentFilePathName != filePathName )
     {
         m_currentFilePathName = filePathName;
-        ewDoParseFile();
+        if ( m_relatedFilePaths.find(filePathName) == m_relatedFilePaths.end() )
+        {
+            ewDoParseFile();
+        }
+        else
+        {
+            m_pDlg->OnFileActivated();
+            ewOnSelectionChanged();
+        }
     }
 }
 
 void CEditorWrapper::ewOnFileClosed()
 {
     clearNavItem(m_currentFilePathName, true);
-    m_currentFilePathName.clear();
-    if ( m_pDlg && m_pDlg->GetHwnd() && m_pDlg->IsWindowVisible() )
+    if ( m_relatedFilePaths.empty() )
     {
-        m_pDlg->ParseFile(NULL);
+        m_currentFilePathName.clear();
+        if ( m_pDlg && m_pDlg->GetHwnd() && m_pDlg->IsWindowVisible() )
+        {
+            m_pDlg->ParseFile(NULL);
+        }
+    }
+    else
+    {
+        m_currentFilePathName.clear();
     }
 }
 
@@ -198,9 +242,16 @@ void CEditorWrapper::ewOnFileOpened()
     if ( m_currentFilePathName != filePathName )
     {
         m_currentFilePathName = filePathName;
-        clearNavItem(m_currentFilePathName, false);
-
-        ewDoParseFile();
+        if ( m_relatedFilePaths.find(filePathName) == m_relatedFilePaths.end() )
+        {
+            clearNavItem(m_currentFilePathName, false);
+            ewDoParseFile();
+        }
+        else
+        {
+            m_pDlg->OnFileActivated();
+            ewOnSelectionChanged();
+        }
     }
 }
 
@@ -237,29 +288,12 @@ void CEditorWrapper::ewOnSelectionChanged()
     }
 }
 
-void CEditorWrapper::ewSetNavigationPoint(const t_string& hint, bool incPos )
+void CEditorWrapper::ewAddRelatedFile(const t_string& filePathName)
 {
-    const t_string filePathName = ewGetFilePathName();
-    if ( filePathName == getCurrentFilePathName() )
-    {
-        int selEnd;
-        int selStart = ewGetSelectionPos(selEnd);
+    m_relatedFilePaths.insert(filePathName);
+}
 
-        t_navmap::iterator itr = getNavItr(filePathName);
-        if ( itr != m_navMap.end() )
-        {
-            CNavigationHistory& nh = itr->second;
-            if ( nh.IsEmpty() || (nh.GetLastItem().selPos != selStart) )
-            {
-                nh.Add(selStart, hint, incPos);
-            }
-        }
-        else
-        {
-            CNavigationHistory nh;
-
-            nh.Add(selStart, hint, incPos);
-            m_navMap.insert( std::make_pair(filePathName, nh) );
-        }
-    }
+bool CEditorWrapper::ewHasRelatedFiles() const
+{
+    return (!m_relatedFilePaths.empty());
 }

@@ -33,9 +33,6 @@
     <ClCompile Include="src\NppTags\Plugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\TagsViewBase\SysUniConv.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\TagsViewBase\TagsDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -78,9 +75,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\TagsViewBase\SettingsDlg.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\TagsViewBase\SysUniConv.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\TagsViewBase\TagsDlg.h">

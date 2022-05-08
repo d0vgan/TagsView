@@ -79,6 +79,9 @@ class CTagsViewPlugin : public CWinApp, public CEditorWrapper
         // the editor short name, e.g. "akel" or "npp"
         virtual LPCTSTR ewGetEditorShortName() const override;
 
+        // open a file
+        virtual bool ewDoOpenFile(LPCTSTR pszFileName) override;
+
         // save current file
         virtual void ewDoSaveFile() override;
 

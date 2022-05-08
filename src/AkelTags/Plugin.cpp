@@ -66,8 +66,12 @@ bool CAkelOptionsReaderWriter::readDataOption(COptionsManager::opt_itr itr)
     PLUGINOPTIONA po;
 #endif
     COption::byte_tt data[COptionsManager::MAX_STRSIZE];
-    auto s = getFullOptionName(itr);
 
+    int nDataSize = 0;
+    const void* pData = itr->getData(&nDataSize);
+    memcpy(data, pData, nDataSize);
+
+    auto s = getFullOptionName(itr);
     po.pOptionName = s.c_str();
     po.lpData = (BYTE *) data;
     po.dwData = (COptionsManager::MAX_STRSIZE - 1);
@@ -139,9 +143,14 @@ bool CAkelOptionsReaderWriter::readStrOption(COptionsManager::opt_itr itr)
     PLUGINOPTIONA po;
 #endif
     TCHAR str[COptionsManager::MAX_STRSIZE];
-    auto s = getFullOptionName(itr);
 
-    str[0] = 0;
+    const TCHAR* pszStr = itr->getStr();
+    if ( pszStr )
+        lstrcpyn(str, pszStr, COptionsManager::MAX_STRSIZE - 1);
+    else
+        str[0] = 0;
+
+    auto s = getFullOptionName(itr);
     po.pOptionName = s.c_str();
     po.lpData = (BYTE *) str;
     po.dwData = (COptionsManager::MAX_STRSIZE - 1)*sizeof(TCHAR);
@@ -279,6 +288,43 @@ LPCTSTR CTagsViewPlugin::ewGetEditorName() const
 LPCTSTR CTagsViewPlugin::ewGetEditorShortName() const
 {
     return _T("akel");
+}
+
+bool CTagsViewPlugin::ewDoOpenFile(LPCTSTR pszFileName)
+{
+    bool bOpened = false;
+
+    FRAMEDATA* lpFrame = (FRAMEDATA *) SendMessage(m_hMainWnd, AKD_FRAMEFINDW, FWF_BYFILENAME, (LPARAM) pszFileName);
+    if ( lpFrame )
+    {
+        // the document is already open, let's activate it
+        SendMessage(m_hMainWnd, AKD_FRAMEACTIVATE, 0, (LPARAM) lpFrame);
+        bOpened = true;
+    }
+    else
+    {
+        // let's open the document
+        extern bool g_isOpeningDocument;
+        OPENDOCUMENT od;
+
+        od.pFile = pszFileName;
+        od.pWorkDir = NULL;
+        od.dwFlags = OD_ADT_BINARYERROR | OD_ADT_REGCODEPAGE;
+        od.nCodePage = 0;
+        od.bBOM = 0;
+        od.hDoc = NULL;
+
+        g_isOpeningDocument = true;
+        bOpened = (SendMessage(m_hMainWnd, AKD_OPENDOCUMENT, 0, (LPARAM) &od) == EOD_SUCCESS);
+        g_isOpeningDocument = false;
+    }
+
+    if ( bOpened )
+    {
+        m_currentFilePathName = pszFileName;
+    }
+
+    return bOpened;
 }
 
 void CTagsViewPlugin::ewDoSaveFile()
@@ -503,7 +549,7 @@ void CTagsViewPlugin::ewCloseTagsView()
     ewClearNavigationHistory(true);
     clearCurrentFilePathName();
     Uninitialize(false);
-    GetTagsDlg().ClearItems();
+    GetTagsDlg().ClearItems(true);
 }
 
 void CTagsViewPlugin::ewDoNavigateBackward()
@@ -564,7 +610,7 @@ void CTagsViewPlugin::Initialize(PLUGINDATA* pd)
     {
         static DOCK dk = { 0 };
         dk.nSide = DKS_LEFT;
-        dk.dwFlags = DKF_DRAGDROP | DKF_NODROPTOP | DKF_NODROPBOTTOM;
+        dk.dwFlags = DKF_DRAGDROP | DKF_NODROPTOP | DKF_NODROPBOTTOM | DKF_HIDDEN;
 
         int nsize = 0;
         const void* pdata = m_tagsDlg.GetOptions().getData(CAkelTagsDlg::OPT_DOCKRECT, &nsize);
@@ -808,11 +854,7 @@ extern "C" void __declspec(dllexport) Settings(PLUGINDATA *pd)
     CSettingsDlg dlg(thePlugin.GetTagsDlg().GetOptions());
     dlg.DoModal(thePlugin.ewGetMainHwnd());
 
-    if ( thePlugin.GetTagsDlg().GetHwnd() &&
-         thePlugin.GetTagsDlg().IsWindowVisible() )
-    {
-        thePlugin.GetTagsDlg().ApplyColors();
-    }
+    thePlugin.GetTagsDlg().OnSettingsChanged();
 
     // Stay in memory, and show as active
     pd->nUnload = UD_NONUNLOAD_NONACTIVE;
@@ -984,7 +1026,7 @@ LRESULT CALLBACK NewMainProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         }
 
         case AKDN_FRAME_ACTIVATE:
-            if ( !g_isClosing )
+            if ( !g_isClosing && !g_isOpeningDocument )
             {
                 LRESULT lResult = 0;
 

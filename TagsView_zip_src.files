@@ -1,8 +1,8 @@
 README.md
 TagsView_History.txt
 TagsView_Readme.txt
-TagsView_zip.bat
-TagsView_zip.files
+TagsView_zip_*.bat
+TagsView_zip_*.files
 *.sln
 *.vcxproj
 *.vcxproj.filters

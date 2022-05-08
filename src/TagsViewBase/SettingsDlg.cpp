@@ -2,11 +2,26 @@
 #include "TagsDlg.h"
 #include "resource.h"
 
-CSettingsDlg::CSettingsDlg(COptionsManager& opt) : CDialog(IDD_SETTINGS)
-, m_opt(opt)
-, m_hChParseOnSave(NULL)
-, m_hCdEditColors(NULL)
-, m_hChCtagsStdout(NULL)
+namespace
+{
+    struct sCheckBoxOption
+    {
+        UINT uCheckBoxId;
+        UINT uOptionId;
+    };
+
+    const sCheckBoxOption arrCheckOptions[] = 
+    {
+        { IDC_CH_OPT_PARSEONSAVE,           CTagsDlg::OPT_BEHAVIOR_PARSEONSAVE },
+        { IDC_CH_OPT_EDITORCOLORS,          CTagsDlg::OPT_COLORS_USEEDITORCOLORS },
+        { IDC_CH_OPT_SHOWTOOLTIPS,          CTagsDlg::OPT_VIEW_SHOWTOOLTIPS },
+        { IDC_CH_OPT_CTAGSSTDOUT,           CTagsDlg::OPT_CTAGS_OUTPUTSTDOUT },
+        { IDC_CH_OPT_SCANFOLDER,            CTagsDlg::OPT_CTAGS_SCANFOLDER },
+        { IDC_CH_OPT_SCANFOLDERRECURSIVELY, CTagsDlg::OPT_CTAGS_SCANFOLDERRECURSIVELY },
+    };
+}
+
+CSettingsDlg::CSettingsDlg(COptionsManager& opt) : CDialog(IDD_SETTINGS), m_opt(opt)
 {
 }
 
@@ -21,59 +36,60 @@ void CSettingsDlg::OnCancel()
 
 BOOL CSettingsDlg::OnInitDialog()
 {
-    m_hChParseOnSave = ::GetDlgItem(GetHwnd(), IDC_CH_OPT_PARSEONSAVE);
-    m_hCdEditColors =  ::GetDlgItem(GetHwnd(), IDC_CH_OPT_EDITORCOLORS);
-    m_hChCtagsStdout = ::GetDlgItem(GetHwnd(), IDC_CH_OPT_CTAGSSTDOUT);
-
-    if ( m_hChParseOnSave )
+    for ( const auto& chOption : arrCheckOptions )
     {
-        ::SendMessage( m_hChParseOnSave, 
-                       BM_SETCHECK, 
-                       m_opt.getBool(CTagsDlg::OPT_BEHAVIOR_PARSEONSAVE) ? BST_CHECKED : BST_UNCHECKED,
-                       0
-                     );
+        HWND hCheckBox = GetDlgItem(chOption.uCheckBoxId) ;
+        if ( hCheckBox )
+        {
+            ::SendMessage(hCheckBox, BM_SETCHECK, m_opt.getBool(chOption.uOptionId) ? BST_CHECKED : BST_UNCHECKED, 0);
+        }
     }
 
-    if ( m_hCdEditColors )
-    {
-        ::SendMessage( m_hCdEditColors, 
-                       BM_SETCHECK, 
-                       m_opt.getBool(CTagsDlg::OPT_COLORS_USEEDITORCOLORS) ? BST_CHECKED : BST_UNCHECKED,
-                       0
-                     );
-    }
-
-    if ( m_hChCtagsStdout )
-    {
-        ::SendMessage( m_hChCtagsStdout, 
-            BM_SETCHECK, 
-            m_opt.getBool(CTagsDlg::OPT_CTAGS_OUTPUTSTDOUT) ? BST_CHECKED : BST_UNCHECKED,
-            0
-        );
-    }
+    OnChScanFolderClicked();
 
     return TRUE;
 }
 
+BOOL CSettingsDlg::OnCommand(WPARAM wParam, LPARAM lParam)
+{
+    switch ( LOWORD(wParam) )
+    {
+        case IDC_CH_OPT_SCANFOLDER:
+            if ( HIWORD(wParam) == BN_CLICKED )
+            {
+                OnChScanFolderClicked();
+            }
+            break;
+    }
+
+    return FALSE;
+}
+
 void CSettingsDlg::OnOK()
 {
-    if ( m_hChParseOnSave )
+    for ( const auto& chOption : arrCheckOptions )
     {
-        LRESULT nResult = ::SendMessage(m_hChParseOnSave, BM_GETCHECK, 0, 0);
-        m_opt.setBool(CTagsDlg::OPT_BEHAVIOR_PARSEONSAVE, (nResult == BST_CHECKED));
-    }
-
-    if ( m_hCdEditColors )
-    {
-        LRESULT nResult = ::SendMessage(m_hCdEditColors, BM_GETCHECK, 0, 0);
-        m_opt.setBool(CTagsDlg::OPT_COLORS_USEEDITORCOLORS, (nResult == BST_CHECKED));
-    }
-
-    if ( m_hChCtagsStdout )
-    {
-        LRESULT nResult = ::SendMessage(m_hChCtagsStdout, BM_GETCHECK, 0, 0);
-        m_opt.setBool(CTagsDlg::OPT_CTAGS_OUTPUTSTDOUT, (nResult == BST_CHECKED));
+        HWND hCheckBox = GetDlgItem(chOption.uCheckBoxId);
+        if ( hCheckBox )
+        {
+            LRESULT nResult = ::SendMessage(hCheckBox, BM_GETCHECK, 0, 0);
+            m_opt.setBool(chOption.uOptionId, (nResult == BST_CHECKED));
+        }
     }
 
     EndDialog(IDOK);
+}
+
+void CSettingsDlg::OnChScanFolderClicked()
+{
+    HWND hCheckBox = GetDlgItem(IDC_CH_OPT_SCANFOLDER);
+    if ( hCheckBox )
+    {
+        LRESULT nResult = ::SendMessage(hCheckBox, BM_GETCHECK, 0, 0);
+        hCheckBox = GetDlgItem(IDC_CH_OPT_SCANFOLDERRECURSIVELY);
+        if ( hCheckBox )
+        {
+            ::EnableWindow(hCheckBox, (nResult == BST_CHECKED) ? TRUE : FALSE);
+        }
+    }
 }

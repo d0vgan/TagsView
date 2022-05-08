@@ -17,13 +17,13 @@ class CSettingsDlg : public CDialog
     protected:
         virtual void OnCancel() override;
         virtual BOOL OnInitDialog() override;
+        virtual BOOL OnCommand(WPARAM wParam, LPARAM lParam) override;
         virtual void OnOK() override;
+
+        void OnChScanFolderClicked();
 
     private:
         COptionsManager& m_opt;
-        HWND m_hChParseOnSave;
-        HWND m_hCdEditColors;
-        HWND m_hChCtagsStdout;
 };
 
 //---------------------------------------------------------------------------

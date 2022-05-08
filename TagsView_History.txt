@@ -5,6 +5,7 @@
 + updated to AkelPad 4.9.8+ and Notepad++ 8.3+
 + applying editor's colors
 + settings dialog
++ ability to scan all files in a folder
 + win32++ updated to 8.9.1+
 + uses the latest ctags from https://github.com/universal-ctags/ctags-win32
 + a lot of internal improvements

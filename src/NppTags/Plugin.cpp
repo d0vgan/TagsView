@@ -37,6 +37,19 @@ LPCTSTR CTagsViewPlugin::ewGetEditorShortName() const
     return _T("npp");
 }
 
+bool CTagsViewPlugin::ewDoOpenFile(LPCTSTR pszFileName)
+{
+    bool bOpened = true;
+
+    if ( !SendNppMsg(NPPM_SWITCHTOFILE, 0, (LPARAM) pszFileName) )
+    {
+        if ( !SendNppMsg(NPPM_DOOPEN, 0, (LPARAM) pszFileName) )
+            bOpened = false;
+    }
+
+    return bOpened;
+}
+
 void CTagsViewPlugin::ewDoSaveFile()
 {
     SendNppMsg(NPPM_SAVECURRENTFILE);
@@ -262,7 +275,7 @@ void CTagsViewPlugin::OnHideTagsDlg()
 {
     ewClearNavigationHistory(true);
     clearCurrentFilePathName();
-    GetTagsDlg().ClearItems();
+    GetTagsDlg().ClearItems(true);
 }
 
 void CTagsViewPlugin::Initialize(HINSTANCE hInstance)
@@ -392,11 +405,7 @@ void funcSettings()
     CSettingsDlg dlg(thePlugin.GetTagsDlg().GetOptions());
     dlg.DoModal(thePlugin.ewGetMainHwnd());
 
-    if ( thePlugin.GetTagsDlg().GetHwnd() &&
-         thePlugin.GetTagsDlg().IsWindowVisible() )
-    {
-        thePlugin.GetTagsDlg().ApplyColors();
-    }
+    thePlugin.GetTagsDlg().OnSettingsChanged();
 }
 
 // static func

@@ -27,7 +27,10 @@
 #define IDC_TV_TAGS                             1008
 #define IDC_CH_OPT_PARSEONSAVE                  2001
 #define IDC_CH_OPT_EDITORCOLORS                 2011
+#define IDC_CH_OPT_SHOWTOOLTIPS                 2012
 #define IDC_CH_OPT_CTAGSSTDOUT                  2021
+#define IDC_CH_OPT_SCANFOLDER                   2031
+#define IDC_CH_OPT_SCANFOLDERRECURSIVELY        2032
 #define IDM_PREVPOS                             40000
 #define IDM_NEXTPOS                             40001
 #define IDM_SORTLINE                            40002

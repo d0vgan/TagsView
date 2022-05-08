@@ -6,6 +6,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <set>
 
 class IEditorWrapper
 {
@@ -23,6 +24,9 @@ class IEditorWrapper
 
         // the editor short name, e.g. "akel" or "npp"
         virtual LPCTSTR ewGetEditorShortName() const = 0;
+
+        // open a file
+        virtual bool ewDoOpenFile(LPCTSTR pszFileName) = 0;
 
         // save current file
         virtual void ewDoSaveFile() = 0;
@@ -98,6 +102,8 @@ class CEditorWrapper : public IEditorWrapper
         // true when current file has navigation history
         bool ewHasNavigationHistory();
 
+        void ewSetNavigationPoint(const t_string& hint, bool incPos = true);
+
         void ewOnFileActivated();
         void ewOnFileClosed();
         void ewOnFileOpened();
@@ -108,7 +114,8 @@ class CEditorWrapper : public IEditorWrapper
         HWND ewGetMainHwnd() const { return m_hMainWnd; }
         void ewSetMainHwnd(HWND hWnd) { m_hMainWnd = hWnd; }
 
-        void ewSetNavigationPoint(const t_string& hint, bool incPos = true);
+        void ewAddRelatedFile(const t_string& filePathName);
+        bool ewHasRelatedFiles() const;
 
     protected:
         typedef struct sNavigationPoint {
@@ -236,6 +243,7 @@ class CEditorWrapper : public IEditorWrapper
         HWND      m_hMainWnd;
         t_navmap  m_navMap;
         t_string  m_currentFilePathName;
+        std::set<t_string> m_relatedFilePaths;
 };
 
 

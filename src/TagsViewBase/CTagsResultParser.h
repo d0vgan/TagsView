@@ -3,12 +3,16 @@
 //---------------------------------------------------------------------------
 #include <string>
 #include <map>
+#include <set>
 #include <wchar.h>
+#include <tchar.h>
 
 class CTagsResultParser
 {
     public:
-        struct tTagData
+        typedef std::basic_string<TCHAR> t_string;
+
+        struct tTagDataInternal
         {
             std::string tagName;
             std::string tagPattern;
@@ -17,21 +21,32 @@ class CTagsResultParser
             std::string filePath;
             int         line;
             int         end_line;
+        };
+
+        struct tTagData
+        {
+            t_string tagName;
+            t_string tagPattern;
+            t_string tagType;
+            t_string tagScope;
+            t_string filePath;
+            int      line;
+            int      end_line;
             union uData {
                 void* p;
                 int   i;
             } data;
             void* pTagData;
 
-            std::string getFullTagName() const
+            t_string getFullTagName() const
             {
                 if ( tagScope.empty() )
                     return tagName;
 
-                std::string s;
+                t_string s;
                 s.reserve(tagScope.length() + tagName.length() + 2);
                 s += tagScope;
-                s += "::";
+                s += _T("::");
                 s += tagName;
                 return s;
             }
@@ -41,9 +56,10 @@ class CTagsResultParser
         typedef std::multimap<int, tTagData> tags_map;
 
         enum eParseFlags {
-            PF_INCLUDEFILEPATH = 0x01
+            PF_ISUTF8          = 0x01,
+            PF_INCLUDEFILEPATH = 0x02
         };
-        static void Parse(const char* s, tags_map& m, unsigned int nParseFlags = 0);
+        static void Parse(const char* s, tags_map& m, unsigned int nParseFlags, std::set<t_string>& relatedFiles);
 };
 
 //---------------------------------------------------------------------------

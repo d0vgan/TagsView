@@ -6,6 +6,7 @@
 #include "win32++/include/wxx_listview.h"
 #include "win32++/include/wxx_treeview.h"
 #include "win32++/include/wxx_toolbar.h"
+#include "win32++/include/wxx_controls.h"
 #include "win32++/include/wxx_gdi.h"
 #include "win32++/include/wxx_criticalsection.h"
 #include <string>
@@ -17,11 +18,10 @@ using Win32xx::CDialog;
 using Win32xx::CListView;
 using Win32xx::CTreeView;
 using Win32xx::CToolBar;
+using Win32xx::CToolTip;
 using Win32xx::CBrush;
 using Win32xx::CCriticalSection;
 using Win32xx::tString;
-using std::string;
-using std::map;
 
 class CEditorWrapper;
 class CTagsDlg;
@@ -31,6 +31,9 @@ class CTagsDlgChild
     public:
         CTagsDlgChild() : m_pDlg(NULL) { }
         void SetTagsDlg(CTagsDlg* pDlg) { m_pDlg = pDlg; }
+
+    protected:
+        static tString getTooltip(const CTagsResultParser::tTagData* pTagData);
 
     protected:
         CTagsDlg* m_pDlg;
@@ -58,6 +61,10 @@ class CTagsListView : public CListView, public CTagsDlgChild
 
     protected:
         virtual LRESULT WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
+
+    protected:
+        CPoint  m_lastPoint;
+        tString m_lastTooltipText;
 };
 
 class CTagsTreeView : public CTreeView, public CTagsDlgChild
@@ -70,28 +77,17 @@ class CTagsTreeView : public CTreeView, public CTagsDlgChild
 
     protected:
         virtual LRESULT WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
-};
-
-class CTagsToolTips : public CWnd, public CTagsDlgChild
-{
-    public:
-        void AddTool(CWnd& wnd);
 
     protected:
-        virtual void PreRegisterClass(WNDCLASS& wc) override
-        {
-            wc.lpszClassName = TOOLTIPS_CLASS;
-        }
-
+        CPoint  m_lastPoint;
+        tString m_lastTooltipText;
 };
 
 class CTagsDlg : public CDialog
 {
     public:
         enum eConsts {
-            MAX_TAGTYPE = 32,
-            MAX_TAGNAME = 128,
-            MAX_TAGPATTERN = 1024
+            MAX_TAGNAME = 200
         };
 
         enum eTagsViewMode {
@@ -138,6 +134,7 @@ class CTagsDlg : public CDialog
             OPT_VIEW_SORT,
             OPT_VIEW_WIDTH,
             OPT_VIEW_NAMEWIDTH,
+            OPT_VIEW_SHOWTOOLTIPS,
 
             OPT_COLORS_USEEDITORCOLORS,
             //OPT_COLORS_BKGND,
@@ -149,6 +146,9 @@ class CTagsDlg : public CDialog
             OPT_BEHAVIOR_PARSEONSAVE,
 
             OPT_CTAGS_OUTPUTSTDOUT,
+            OPT_CTAGS_SCANFOLDER,
+            OPT_CTAGS_SCANFOLDERRECURSIVELY,
+            OPT_CTAGS_SKIPFILEEXTS,
 
             OPT_DEBUG_DELETETEMPINPUTFILE,
             OPT_DEBUG_DELETETEMPOUTPUTFILE,
@@ -166,7 +166,7 @@ class CTagsDlg : public CDialog
 
         const eTagsSortMode GetSortMode() const { return m_sortMode; }
         const eTagsViewMode GetViewMode() const { return m_viewMode; }
-        bool  GoToTag(const TCHAR* cszTagName); // not implemented yet
+        bool  GoToTag(const tString& filePath, const TCHAR* cszTagName); // not implemented yet
         void  ParseFile(const TCHAR* const cszFileName);
         void  ReparseCurrentFile();
         void  SetSortMode(eTagsSortMode sortMode);
@@ -175,7 +175,11 @@ class CTagsDlg : public CDialog
         void  UpdateCurrentItem(); // set current item according to caret pos
         void  UpdateNavigationButtons();
 
-        void  CloseDlg()  { EndDialog(0); }
+        void  CloseDlg()
+        {
+            if ( GetHwnd() && IsWindow() )
+                EndDialog(0);
+        }
 
         // MUST be called manually to read the options
         void  ReadOptions()  { initOptions(); m_opt.ReadOptions(m_optRdWr); }
@@ -247,6 +251,9 @@ class CTagsDlg : public CDialog
         void ApplyColors();
         void ClearItems(bool bDelayedRedraw = false);
 
+        void OnFileActivated();
+        void OnSettingsChanged();
+
     protected:
         virtual INT_PTR DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
         virtual void EndDialog(INT_PTR nResult) override;
@@ -264,20 +271,23 @@ class CTagsDlg : public CDialog
         void OnNextPosClicked();
         void OnParseClicked();
 
-        void initTooltips();
+        void createTooltips();
+        void destroyTooltips();
 
         void deleteAllItems(bool bDelayedRedraw);
         int addListViewItem(int nItem, const CTagsResultParser::tTagData& tagData);
         HTREEITEM addTreeViewItem(HTREEITEM hParent, const CTagsResultParser::tTagData& tagData);
-        bool isTagMatchFilter(const string& tagName);
+        bool isTagMatchFilter(const tString& tagName) const;
+        static bool isTagFilePathSame(const tString& filePath1, const tString& filePath2);
         void sortTagsByLine();
         void sortTagsByName();
         void sortTagsByType();
 
         void checkCTagsExePath();
 
-        CTagsResultParser::tags_map::iterator getTagByLine(const int line);
-        CTagsResultParser::tags_map::iterator getTagByName(const string& tagName);
+        CTagsResultParser::tags_map::iterator getTagByLine(const tString& filePath, const int line);
+        CTagsResultParser::tags_map::iterator findTagByLine(const tString& filePath, const int line);
+        CTagsResultParser::tags_map::iterator getTagByName(const tString& filePath, const tString& tagName);
 
         virtual void initOptions();
 
@@ -298,13 +308,12 @@ class CTagsDlg : public CDialog
         CTagsFilterEdit m_edFilter;
         CTagsListView   m_lvTags;
         CTagsTreeView   m_tvTags;
-        CTagsToolTips   m_ttHints;
-        string          m_tagFilter;
+        CToolTip        m_ttHints;
+        tString         m_tagFilter;
         tString         m_ctagsExeFilePath;
         tString         m_ctagsTempInputFilePath;
         tString         m_ctagsTempOutputFilePath;
         CTagsResultParser::tags_map m_tags;
-        bool            m_isUTF8tags;
         COptionsManager m_opt;
         COptionsReaderWriter* m_optRdWr;
         CEditorWrapper* m_pEdWr;
@@ -312,7 +321,8 @@ class CTagsDlg : public CDialog
         COLORREF        m_crTextColor;
         COLORREF        m_crBkgndColor;
         HBRUSH          m_hBkgndBrush;
-        int  m_prevSelStart;
+        int             m_prevSelStart;
+        bool            m_isUpdatingSelToItem;
         volatile LONG m_nTagsThreadCount;
         std::map<int, Win32xx::CString> m_DispInfoText;
 };
