@@ -113,8 +113,11 @@ namespace
 
 
 // parses result of "ctags --fields=fKnste"
-void CTagsResultParser::Parse(const char* s, tags_map& m, unsigned int nParseFlags, std::set<t_string>& relatedFiles)
+void CTagsResultParser::Parse(const char* s, unsigned int nParseFlags, tParseContext& context)
 {
+    tags_map& m = context.m;
+    std::set<t_string>& relatedFiles = context.relatedFiles;
+
     m.clear();
 
     if ( !s )
@@ -135,7 +138,8 @@ void CTagsResultParser::Parse(const char* s, tags_map& m, unsigned int nParseFla
     tTagDataInternal tagData;
     tTagData tagDataOut;
     std::vector<TCHAR> buf;
-    tags_map::iterator itr;
+    tags_map::iterator itrFileTags;
+    file_tags_map::iterator itr;
 
     buf.reserve(200);
 
@@ -177,7 +181,7 @@ void CTagsResultParser::Parse(const char* s, tags_map& m, unsigned int nParseFla
                 p = strchr_pn(s, pn, '\t'); // skip file path
                 if ( p != pn )
                 {
-                    if ( nParseFlags & PF_INCLUDEFILEPATH )
+                    if ( context.inputFileOverride.empty() )
                     {
                         tagData.filePath.assign( s, static_cast<size_t>(p - s) );
                     }
@@ -281,7 +285,7 @@ void CTagsResultParser::Parse(const char* s, tags_map& m, unsigned int nParseFla
                 preprocess_tag_string(tagData.tagName);
                 preprocess_tag_string(tagData.tagPattern);
                 preprocess_tag_string(tagData.tagScope);
-                if ( nParseFlags & PF_INCLUDEFILEPATH )
+                if ( context.inputFileOverride.empty() )
                 {
                     string_replace_all(tagData.filePath, '/', '\\');
                 }
@@ -290,17 +294,27 @@ void CTagsResultParser::Parse(const char* s, tags_map& m, unsigned int nParseFla
                 tagDataOut.tagPattern = to_tstring(tagData.tagPattern, nParseFlags, buf);
                 tagDataOut.tagType    = to_tstring(tagData.tagType, nParseFlags, buf);
                 tagDataOut.tagScope   = to_tstring(tagData.tagScope, nParseFlags, buf);
-                tagDataOut.filePath   = to_tstring(tagData.filePath, nParseFlags, buf);
+                if ( context.inputFileOverride.empty() )
+                {
+                    tagDataOut.filePath = to_tstring(tagData.filePath, nParseFlags, buf);
+                }
+                else
+                {
+                    tagDataOut.filePath = context.inputFileOverride;
+                }
                 tagDataOut.line       = tagData.line;
                 tagDataOut.end_line   = tagData.end_line;
                 tagDataOut.data.p     = nullptr;
                 tagDataOut.pTagData   = nullptr;
 
-                itr = m.insert( std::make_pair(tagDataOut.line, tagDataOut) );
-                if ( itr != m.end() )
+                itrFileTags = m.find(tagDataOut.filePath);
+                if ( itrFileTags == m.end() )
                 {
-                    itr->second.pTagData = (void *) &(itr->second);
+                    itrFileTags = m.insert( std::make_pair(tagDataOut.filePath, tFileTags()) ).first;
                 }
+
+                itr = itrFileTags->second.tagsMap.insert( std::make_pair(tagDataOut.line, tagDataOut) );
+                itr->second.pTagData = (void *) &(itr->second);
                 if ( !tagDataOut.filePath.empty() )
                 {
                     relatedFiles.insert(tagDataOut.filePath);
@@ -314,5 +328,13 @@ void CTagsResultParser::Parse(const char* s, tags_map& m, unsigned int nParseFla
         s = p;
         if ( *s != 0 ) // checking for the trailing '\0'
             ++s;
+    }
+
+    for ( auto& fileItem : m )
+    {
+        for ( auto& tagsItem : fileItem.second.tagsMap )
+        {
+            fileItem.second.tagsVec.push_back(&tagsItem.second);
+        }
     }
 }

@@ -1,7 +1,6 @@
 #ifndef _TAGS_DLG_H_
 #define _TAGS_DLG_H_
 //---------------------------------------------------------------------------
-#include "CTagsResultParser.h"
 #include "win32++/include/wxx_dialog.h"
 #include "win32++/include/wxx_listview.h"
 #include "win32++/include/wxx_treeview.h"
@@ -11,8 +10,10 @@
 #include "win32++/include/wxx_criticalsection.h"
 #include <string>
 #include <map>
+#include <vector>
 #include "EditorWrapper.h"
 #include "OptionsManager.h"
+#include "CTagsResultParser.h"
 
 using Win32xx::CDialog;
 using Win32xx::CListView;
@@ -100,13 +101,15 @@ class CTagsDlg : public CDialog
             TSM_NONE = 0,
             TSM_NAME,
             TSM_TYPE,
-            TSM_LINE
+            TSM_LINE,
+            TSM_FILE
         };
 
         enum eListViewColumns {
             LVC_NAME = 0,
             LVC_TYPE,
             LVC_LINE,
+            LVC_FILE,
 
             LVC_TOTAL
         };
@@ -154,6 +157,17 @@ class CTagsDlg : public CDialog
             OPT_DEBUG_DELETETEMPOUTPUTFILE,
 
             OPT_COUNT
+        };
+
+        struct tCTagsThreadParam 
+        {
+            CTagsDlg* pDlg { nullptr };
+            DWORD     dwThreadID { 0 };
+            bool      isUTF8{ false };
+            tString   cmd_line;
+            tString   source_file_name;
+            tString   temp_input_file;
+            tString   temp_output_file;
         };
 
         static const TCHAR* cszListViewColumnNames[LVC_TOTAL];
@@ -262,7 +276,7 @@ class CTagsDlg : public CDialog
         virtual void OnOK() override;
         virtual LRESULT OnNotify(WPARAM wParam, LPARAM lParam) override;
 
-        void OnAddTags(const char* s, bool isUTF8);
+        void OnAddTags(const char* s, const tCTagsThreadParam* tt);
         BOOL OnInitDialog();
         void OnSize(bool bInitial = false);
         INT_PTR OnCtlColorEdit(WPARAM wParam, LPARAM lParam);
@@ -285,9 +299,9 @@ class CTagsDlg : public CDialog
 
         void checkCTagsExePath();
 
-        CTagsResultParser::tags_map::iterator getTagByLine(const tString& filePath, const int line);
-        CTagsResultParser::tags_map::iterator findTagByLine(const tString& filePath, const int line);
-        CTagsResultParser::tags_map::iterator getTagByName(const tString& filePath, const tString& tagName);
+        CTagsResultParser::file_tags_map::iterator getTagByLine(CTagsResultParser::file_tags_map& fileTags, const int line);
+        CTagsResultParser::file_tags_map::iterator findTagByLine(CTagsResultParser::file_tags_map& fileTags, const int line);
+        CTagsResultParser::file_tags_map::iterator getTagByName(CTagsResultParser::file_tags_map& fileTags, const tString& tagName);
 
         virtual void initOptions();
 
