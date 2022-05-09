@@ -159,6 +159,9 @@ class CTagsDlg : public CDialog
             OPT_COUNT
         };
 
+        typedef CTagsResultParser::tTagData tTagData;
+        typedef CTagsResultParser::file_tags file_tags;
+
         struct tCTagsThreadParam 
         {
             CTagsDlg* pDlg { nullptr };
@@ -289,19 +292,20 @@ class CTagsDlg : public CDialog
         void destroyTooltips();
 
         void deleteAllItems(bool bDelayedRedraw);
-        int addListViewItem(int nItem, const CTagsResultParser::tTagData& tagData);
-        HTREEITEM addTreeViewItem(HTREEITEM hParent, const CTagsResultParser::tTagData& tagData);
+        int addListViewItem(int nItem, const tTagData* pTag);
+        HTREEITEM addTreeViewItem(HTREEITEM hParent, const tString& tagName, tTagData* pTag);
         bool isTagMatchFilter(const tString& tagName) const;
-        static bool isTagFilePathSame(const tString& filePath1, const tString& filePath2);
-        void sortTagsByLine();
-        void sortTagsByName();
-        void sortTagsByType();
+        size_t getNumTotalItemsForSorting() const;
+        size_t getNumItemsForSorting(const CTagsDlg::file_tags& fileTags) const;
+        void sortTagsByLineLV();
+        void sortTagsByNameOrTypeLV(eTagsSortMode sortMode);
+        void sortTagsTV(eTagsSortMode sortMode);
 
         void checkCTagsExePath();
 
-        CTagsResultParser::file_tags_map::iterator getTagByLine(CTagsResultParser::file_tags_map& fileTags, const int line);
-        CTagsResultParser::file_tags_map::iterator findTagByLine(CTagsResultParser::file_tags_map& fileTags, const int line);
-        CTagsResultParser::file_tags_map::iterator getTagByName(CTagsResultParser::file_tags_map& fileTags, const tString& tagName);
+        CTagsResultParser::file_tags::iterator getTagByLine(CTagsResultParser::file_tags& fileTags, const int line);
+        CTagsResultParser::file_tags::iterator findTagByLine(CTagsResultParser::file_tags& fileTags, const int line);
+        CTagsResultParser::file_tags::iterator getTagByName(CTagsResultParser::file_tags& fileTags, const tString& tagName);
 
         virtual void initOptions();
 

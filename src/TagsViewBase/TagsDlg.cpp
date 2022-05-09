@@ -5,11 +5,10 @@
 #include <memory>
 #include <set>
 #include <list>
+#include <algorithm>
 
 namespace
 {
-    typedef CTagsResultParser::tTagData tTagData;
-
     bool isFileExist(LPCTSTR pszFilePath)
     {
         if ( pszFilePath && pszFilePath[0] )
@@ -255,7 +254,7 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                         m_pDlg->m_lvTags.SetItemState(iItem, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
                         m_pDlg->m_lvTags.SetSelectionMark(iItem);
 
-                        const tTagData* pTagData = (const tTagData *) lvi.lParam;
+                        const CTagsDlg::tTagData* pTagData = (const CTagsDlg::tTagData *) lvi.lParam;
                         if ( pTagData )
                         {
                             if ( !pTagData->filePath.empty() )
@@ -328,7 +327,7 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                             LPNMTTDISPINFO lpnmdi = (LPNMTTDISPINFO) lParam;
                             SendMessage(lpnmdi->hdr.hwndFrom, TTM_SETMAXTIPWIDTH, 0, 600);
 
-                            const tTagData* pTagData = (const tTagData *) GetItemData(nItem);
+                            const CTagsDlg::tTagData* pTagData = (const CTagsDlg::tTagData *) GetItemData(nItem);
                             if ( pTagData )
                             {
                                 m_lastTooltipText = getTooltip(pTagData);
@@ -402,7 +401,7 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
                     m_pDlg->m_tvTags.GetItem(tvi);
 
-                    const tTagData* pTagData = (const tTagData *) tvi.lParam;
+                    const CTagsDlg::tTagData* pTagData = (const CTagsDlg::tTagData *) tvi.lParam;
                     if ( pTagData )
                     {
                         if ( !pTagData->filePath.empty() )
@@ -476,7 +475,7 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                             LPNMTTDISPINFO lpnmdi = (LPNMTTDISPINFO) lParam;
                             SendMessage(lpnmdi->hdr.hwndFrom, TTM_SETMAXTIPWIDTH, 0, 600);
 
-                            const tTagData* pTagData = (const tTagData *) GetItemData(hItem);
+                            const CTagsDlg::tTagData* pTagData = (const CTagsDlg::tTagData *) GetItemData(hItem);
                             if ( pTagData )
                             {
                                 m_lastTooltipText = getTooltip(pTagData);
@@ -593,6 +592,15 @@ CTagsDlg::~CTagsDlg()
     {
         DeleteTempFile(m_ctagsTempOutputFilePath);
     }
+
+    for ( auto& fileItem : m_tags )
+    {
+        for ( tTagData* pTag : fileItem.second )
+        {
+            delete pTag;
+        }
+    }
+    m_tags.clear();
 }
 
 void CTagsDlg::DeleteTempFile(const tString& filePath)
@@ -1169,8 +1177,8 @@ bool CTagsDlg::GoToTag(const tString& filePath, const TCHAR* cszTagName)  // not
 {
     if ( cszTagName && cszTagName[0] && !m_tags.empty() )
     {
-        CTagsResultParser::file_tags_map& fileTags = m_tags[filePath].tagsMap;
-        CTagsResultParser::file_tags_map::iterator itr = getTagByName(fileTags, cszTagName);
+        CTagsResultParser::file_tags& fileTags = m_tags[filePath];
+        CTagsResultParser::file_tags::iterator itr = getTagByName(fileTags, cszTagName);
         if ( itr != fileTags.end() )
         {
         }
@@ -1678,15 +1686,13 @@ void CTagsDlg::SetSortMode(eTagsSortMode sortMode)
             {
                 case TSM_LINE:
                 case TSM_TYPE:
-                    m_sortMode = TSM_LINE;
-                    sortTagsByType();
+                    sortTagsTV(TSM_LINE);
                     m_tbButtons.SetButtonState(IDM_SORTNAME, TBSTATE_ENABLED);
                     m_tbButtons.SetButtonState(IDM_SORTLINE, TBSTATE_ENABLED | TBSTATE_CHECKED);
                     break;
 
                 case TSM_NAME:
-                    m_sortMode = TSM_NAME;
-                    sortTagsByType();
+                    sortTagsTV(TSM_NAME);
                     m_tbButtons.SetButtonState(IDM_SORTLINE, TBSTATE_ENABLED);
                     m_tbButtons.SetButtonState(IDM_SORTNAME, TBSTATE_ENABLED | TBSTATE_CHECKED);
                     break;
@@ -1704,18 +1710,17 @@ void CTagsDlg::SetSortMode(eTagsSortMode sortMode)
             switch ( sortMode )
             {
                 case TSM_LINE:
-                    sortTagsByLine();
+                    sortTagsByLineLV();
                     m_tbButtons.SetButtonState(IDM_SORTNAME, TBSTATE_ENABLED);
                     m_tbButtons.SetButtonState(IDM_SORTLINE, TBSTATE_ENABLED | TBSTATE_CHECKED);
                     break;
 
                 case TSM_TYPE:
-                    m_sortMode = TSM_TYPE;
-                    sortTagsByType();
+                    sortTagsByNameOrTypeLV(TSM_TYPE);
                     break;
 
                 case TSM_NAME:
-                    sortTagsByName();
+                    sortTagsByNameOrTypeLV(TSM_NAME);
                     m_tbButtons.SetButtonState(IDM_SORTLINE, TBSTATE_ENABLED);
                     m_tbButtons.SetButtonState(IDM_SORTNAME, TBSTATE_ENABLED | TBSTATE_CHECKED);
                     break;
@@ -1782,8 +1787,8 @@ void CTagsDlg::UpdateCurrentItem()
                 return;
             }
 
-            CTagsResultParser::file_tags_map& fileTags = fileItr->second.tagsMap;
-            CTagsResultParser::file_tags_map::const_iterator itr = findTagByLine(fileTags, line);
+            CTagsResultParser::file_tags& fileTags = fileItr->second;
+            CTagsResultParser::file_tags::const_iterator itr = findTagByLine(fileTags, line);
             if ( itr == fileTags.end() )
             {
                 if ( itr != fileTags.begin() )
@@ -1794,7 +1799,7 @@ void CTagsDlg::UpdateCurrentItem()
 
             if ( m_viewMode == TVM_TREE )
             {
-                HTREEITEM hItem = (HTREEITEM) itr->second.data.p;
+                HTREEITEM hItem = (HTREEITEM) (*itr)->data.p;
                 if ( hItem )
                 {
                     m_csTagsItems.Lock();
@@ -1808,7 +1813,7 @@ void CTagsDlg::UpdateCurrentItem()
             }
             else
             {
-                int iItem = itr->second.data.i;
+                int iItem = (*itr)->data.i;
                 if ( iItem >= 0 )
                 {
                     m_csTagsItems.Lock();
@@ -1881,34 +1886,33 @@ void CTagsDlg::deleteAllItems(bool bDelayedRedraw)
     }
 }
 
-int CTagsDlg::addListViewItem(int nItem, const tTagData& tagData)
+int CTagsDlg::addListViewItem(int nItem, const tTagData* pTag)
 {
     LVITEM lvi;
-    tString tagName = tagData.getFullTagName();
+    tString tagName = pTag->getFullTagName();
 
     ::ZeroMemory(&lvi, sizeof(lvi));
     lvi.iItem = nItem;
     lvi.mask = LVIF_TEXT | LVIF_PARAM;
     lvi.pszText = const_cast<TCHAR*>(tagName.c_str());
     lvi.cchTextMax = static_cast<int>(tagName.length());
-    lvi.lParam = (LPARAM) tagData.pTagData;
+    lvi.lParam = (LPARAM) pTag;
     int nRet = m_lvTags.InsertItem(lvi);
 
-    m_lvTags.SetItemText(nItem, LVC_TYPE, tagData.tagType.c_str());
+    m_lvTags.SetItemText(nItem, LVC_TYPE, pTag->tagType.c_str());
 
     TCHAR ts[20];
-    wsprintf(ts, _T("%d"), tagData.line);
+    wsprintf(ts, _T("%d"), pTag->line);
     m_lvTags.SetItemText(nItem, LVC_LINE, ts);
 
-    m_lvTags.SetItemText(nItem, LVC_FILE, getFileName(tagData.filePath));
+    m_lvTags.SetItemText(nItem, LVC_FILE, getFileName(pTag->filePath));
 
     return nRet;
 }
 
-HTREEITEM CTagsDlg::addTreeViewItem(HTREEITEM hParent, const tTagData& tagData)
+HTREEITEM CTagsDlg::addTreeViewItem(HTREEITEM hParent, const tString& tagName, tTagData* pTag)
 {
     TVINSERTSTRUCT tvis;
-    const tString& tagName = tagData.tagName;
 
     ::ZeroMemory(&tvis, sizeof(tvis));
     tvis.hParent = hParent;
@@ -1916,7 +1920,7 @@ HTREEITEM CTagsDlg::addTreeViewItem(HTREEITEM hParent, const tTagData& tagData)
     tvis.item.mask = TVIF_TEXT | TVIF_PARAM;
     tvis.item.pszText = const_cast<TCHAR*>(tagName.c_str());
     tvis.item.cchTextMax = static_cast<int>(tagName.length());
-    tvis.item.lParam = (LPARAM) tagData.pTagData;
+    tvis.item.lParam = (LPARAM) pTag;
 
     return m_tvTags.InsertItem(tvis);
 }
@@ -2018,9 +2022,14 @@ void CTagsDlg::checkCTagsExePath()
     }
 }
 
-CTagsResultParser::file_tags_map::iterator CTagsDlg::getTagByLine(CTagsResultParser::file_tags_map& fileTags, const int line)
+CTagsResultParser::file_tags::iterator CTagsDlg::getTagByLine(CTagsResultParser::file_tags& fileTags, const int line)
 {
-    CTagsResultParser::file_tags_map::iterator itr = fileTags.upper_bound(line); // returns an item with itr->second.line > line
+    CTagsResultParser::file_tags::iterator itr = std::upper_bound(
+        fileTags.begin(),
+        fileTags.end(),
+        line,
+        [](const int line, const tTagData* pTag){ return (line < pTag->line); }
+    ); // returns an item with itr->second.line > line
 
     if ( itr == fileTags.end() && itr != fileTags.begin() )
     {
@@ -2036,7 +2045,7 @@ CTagsResultParser::file_tags_map::iterator CTagsDlg::getTagByLine(CTagsResultPar
 
         for ( ; ; --itr2 )
         {
-            if ( itr2->second.line <= line )
+            if ( (*itr2)->line <= line )
             {
                 itr = itr2; // success!
                 break;
@@ -2053,15 +2062,15 @@ CTagsResultParser::file_tags_map::iterator CTagsDlg::getTagByLine(CTagsResultPar
     return itr;
 }
 
-CTagsResultParser::file_tags_map::iterator CTagsDlg::findTagByLine(CTagsResultParser::file_tags_map& fileTags, const int line)
+CTagsResultParser::file_tags::iterator CTagsDlg::findTagByLine(CTagsResultParser::file_tags& fileTags, const int line)
 {
-    CTagsResultParser::file_tags_map::iterator itr = getTagByLine(fileTags, line);
+    CTagsResultParser::file_tags::iterator itr = getTagByLine(fileTags, line);
 
     if ( itr != fileTags.end() )
     {
         for ( auto itr2 = itr; ; --itr2 )
         {
-            if ( itr2->second.end_line >= line )
+            if ( (*itr2)->end_line >= line )
             {
                 itr = itr2;
                 break;
@@ -2070,7 +2079,7 @@ CTagsResultParser::file_tags_map::iterator CTagsDlg::findTagByLine(CTagsResultPa
             if ( itr2 == fileTags.begin() )
                 break;
 
-            if ( itr2->second.tagScope.empty() )
+            if ( (*itr2)->tagScope.empty() )
                 break;
         }
     }
@@ -2078,12 +2087,12 @@ CTagsResultParser::file_tags_map::iterator CTagsDlg::findTagByLine(CTagsResultPa
     return itr;
 }
 
-CTagsResultParser::file_tags_map::iterator CTagsDlg::getTagByName(CTagsResultParser::file_tags_map& fileTags, const tString& tagName)
+CTagsResultParser::file_tags::iterator CTagsDlg::getTagByName(CTagsResultParser::file_tags& fileTags, const tString& tagName)
 {
-    CTagsResultParser::file_tags_map::iterator itr = fileTags.begin();
+    CTagsResultParser::file_tags::iterator itr = fileTags.begin();
     while ( itr != fileTags.end() )
     {
-        if ( itr->second.tagName == tagName )
+        if ( (*itr)->tagName == tagName )
             break;
         else
             ++itr;
@@ -2135,9 +2144,6 @@ void CTagsDlg::initOptions()
 
 bool CTagsDlg::isTagMatchFilter(const tString& tagName) const
 {
-    if ( m_tagFilter.empty() )
-        return true;
-
     const int len_filt = static_cast<int>(m_tagFilter.length());
     const int len_name = static_cast<int>(tagName.length());
     if ( len_name < len_filt )
@@ -2161,102 +2167,163 @@ bool CTagsDlg::isTagMatchFilter(const tString& tagName) const
     return false;
 }
 
-bool CTagsDlg::isTagFilePathSame(const tString& filePath1, const tString& filePath2)
+size_t CTagsDlg::getNumTotalItemsForSorting() const
 {
-    return ( filePath1.empty() || filePath2.empty() || lstrcmpi(filePath1.c_str(), filePath2.c_str()) == 0 );
+    size_t nTotalItems = 0;
+    for ( const auto& fileItem : m_tags )
+    {
+        nTotalItems += fileItem.second.size();
+    }
+
+    size_t nItemsToReserve = nTotalItems;
+    if ( nTotalItems != 0 && !m_tagFilter.empty() )
+    {
+        size_t nDivider = 1;
+        for ( size_t i = m_tagFilter.length(); i != 0; --i )
+        {
+            nDivider *= 4;
+        }
+        nItemsToReserve /= nDivider;
+        nItemsToReserve = 16*(1 + nItemsToReserve/16);
+    }
+
+    return nItemsToReserve;
 }
 
-void CTagsDlg::sortTagsByLine()
+size_t  CTagsDlg::getNumItemsForSorting(const CTagsDlg::file_tags& fileTags) const
+{
+    size_t nItemsToReserve = fileTags.size();
+    if ( nItemsToReserve != 0 && !m_tagFilter.empty() )
+    {
+        size_t nDivider = 1;
+        for ( size_t i = m_tagFilter.length(); i != 0; --i )
+        {
+            nDivider *= 4;
+        }
+        nItemsToReserve /= nDivider;
+
+    }
+    return nItemsToReserve;
+}
+
+void CTagsDlg::sortTagsByLineLV()
 {
     int nItem = 0;
     for ( auto& fileItem : m_tags )
     {
-        CTagsResultParser::file_tags_vec& fileTags = fileItem.second.tagsVec;
-        for ( tTagData* tagPtr : fileTags )
+        CTagsResultParser::file_tags& fileTags = fileItem.second;
+        for ( tTagData* pTag : fileTags )
         {
-            if ( isTagMatchFilter(tagPtr->getFullTagName()) )
+            if ( m_tagFilter.empty() || isTagMatchFilter(pTag->getFullTagName()) )
             {
-                tagPtr->data.i = addListViewItem(nItem++, *tagPtr);
+                pTag->data.i = addListViewItem(nItem++, pTag);
             }
             else
             {
-                tagPtr->data.i = -1;
+                pTag->data.i = -1;
             }
         }
     }
 }
 
-void CTagsDlg::sortTagsByName()
+void CTagsDlg::sortTagsByNameOrTypeLV(eTagsSortMode sortMode)
 {
-    std::list<tTagData*> tagsList;
+    std::vector<tTagData*> tags;
+    tags.reserve(getNumTotalItemsForSorting());
 
     for ( auto& fileItem : m_tags )
     {
-        CTagsResultParser::file_tags_vec& fileTags = fileItem.second.tagsVec;
-        for ( tTagData* tagPtr : fileTags )
+        CTagsResultParser::file_tags& fileTags = fileItem.second;
+        for ( tTagData* pTag : fileTags )
         {
-            if ( isTagMatchFilter(tagPtr->getFullTagName()) )
+            if ( m_tagFilter.empty() || isTagMatchFilter(pTag->getFullTagName()) )
             {
-                tagsList.push_back(tagPtr);
+                tags.push_back(pTag);
             }
             else
             {
-                tagPtr->data.i = -1;
+                pTag->data.i = -1;
             }
         }
     }
 
-    tagsList.sort( [](tTagData* tagPtr1, tTagData* tagPtr2) { return (tagPtr1->getFullTagName() < tagPtr2->getFullTagName()); } );
+    if ( sortMode == TSM_NAME )
+    {
+        std::sort(
+            tags.begin(),
+            tags.end(),
+            [](tTagData* pTag1, tTagData* pTag2){ return (pTag1->getFullTagName() < pTag2->getFullTagName()); }
+        );
+    }
+    else // if ( sortMode == TSM_TYPE )
+    {
+        std::sort(
+            tags.begin(),
+            tags.end(),
+            [](tTagData* pTag1, tTagData* pTag2){ return (pTag1->tagType < pTag2->tagType); }
+        );
+    }
 
     int nItem = 0;
-    for ( tTagData* tagPtr : tagsList )
+    for ( tTagData* pTag : tags )
     {
-        int n = addListViewItem(nItem++, *tagPtr);
-        tagPtr->data.i = n;
+        int n = addListViewItem(nItem++, pTag);
+        pTag->data.i = n;
     }
 }
 
-void CTagsDlg::sortTagsByType()
+void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
 {
-    std::list<tTagData*> tagsList;
-
-    for ( auto& fileItem : m_tags )
+    struct tTagsByFile
     {
-        CTagsResultParser::file_tags_vec& fileTags = fileItem.second.tagsVec;
-        for ( tTagData* tagPtr : fileTags )
-        {
-            if ( isTagMatchFilter(tagPtr->getFullTagName()) )
-            {
-                tagsList.push_back(tagPtr);
-            }
-            else
-            {
-                if ( m_viewMode == TVM_TREE )
-                    tagPtr->data.p = nullptr;
-                else
-                    tagPtr->data.i = -1;
-            }
-        }
-    }
-
-    if ( m_sortMode == TSM_LINE )
-    {
-        tagsList.sort( [](tTagData* tagPtr1, tTagData* tagPtr2) { return (lstrcmpi(tagPtr1->filePath.c_str(), tagPtr2->filePath.c_str()) <= 0 && tagPtr1->line < tagPtr2->line); } );
-    }
-    else if ( m_sortMode == TSM_NAME )
-    {
-        tagsList.sort( [](tTagData* tagPtr1, tTagData* tagPtr2) { return (lstrcmpi(tagPtr1->filePath.c_str(), tagPtr2->filePath.c_str()) <= 0 && tagPtr1->getFullTagName() < tagPtr2->getFullTagName()); } );
-    }
-    else // TSM_TYPE
-    {
-        tagsList.sort( [](tTagData* tagPtr1, tTagData* tagPtr2) { return (tagPtr1->tagType < tagPtr2->tagType); } );
-    }
-
-    struct sScopeItem
-    {
-        HTREEITEM hFileItem;
-        std::map<tString, HTREEITEM> scopeMap;
+        tString   filePath;
+        file_tags fileTags;
     };
+
+    std::list<tTagsByFile> tags;
+
+    for ( auto& fileItem : m_tags )
+    {
+        CTagsResultParser::file_tags& fileTags = fileItem.second;
+
+        tTagsByFile tagsByFile;
+        tagsByFile.filePath = fileItem.first;
+        tagsByFile.fileTags.reserve(getNumItemsForSorting(fileTags));
+
+        for ( tTagData* pTag : fileTags )
+        {
+            if ( m_tagFilter.empty() || isTagMatchFilter(pTag->getFullTagName()) )
+            {
+                tagsByFile.fileTags.push_back(pTag);
+            }
+            else
+            {
+                pTag->data.p = nullptr;
+            }
+        }
+
+        if ( !tagsByFile.fileTags.empty() )
+        {
+            if ( sortMode == TSM_LINE )
+            {
+                std::sort(
+                    tagsByFile.fileTags.begin(),
+                    tagsByFile.fileTags.end(),
+                    [](tTagData* pTag1, tTagData* pTag2){ return (pTag1->line < pTag2->line); }
+                );
+            }
+            else // if ( sortMode == TSM_NAME )
+            {
+                std::sort(
+                    tagsByFile.fileTags.begin(),
+                    tagsByFile.fileTags.end(),
+                    [](tTagData* pTag1, tTagData* pTag2){ return (pTag1->getFullTagName() < pTag2->getFullTagName()); }
+                );
+            }
+
+            tags.push_back(tagsByFile);
+        }
+    }
 
     auto setNodeItemExpanded = [](CTagsTreeView& tvTags, HTREEITEM hItem)
     {
@@ -2271,100 +2338,53 @@ void CTagsDlg::sortTagsByType()
         tvTags.SetItem(tvi);
     };
 
-    auto createTagData = [](const tString& tagName, int line) -> tTagData
+    for ( tTagsByFile& tagsByFile : tags )
     {
-        tTagData tagData;
+        // adding a root file item
+        HTREEITEM hFileItem = addTreeViewItem( TVI_ROOT, getFileName(tagsByFile.filePath), nullptr );
+        setNodeItemExpanded(m_tvTags, hFileItem);
 
-        tagData.tagName = tagName;
-        tagData.line = line;
-        tagData.end_line = line;
-        tagData.data.p = nullptr;
-        tagData.pTagData = nullptr;
+        std::map<tString, HTREEITEM> scopeMap;
 
-        return tagData;
-    };
-
-    std::map<tString, sScopeItem> fileScopeMap;
-    int nItem = 0;
-
-    for ( tTagData* tagPtr : tagsList )
-    {
-        if ( m_viewMode == TVM_TREE )
+        for ( tTagData* pTag : tagsByFile.fileTags )
         {
-            bool bAddFileRootNode = true;
-
-            HTREEITEM hFileItem = TVI_ROOT;
-            std::map<tString, sScopeItem>::iterator itrFileScope;
-
-            if ( bAddFileRootNode)
-            {
-                itrFileScope = fileScopeMap.find(tagPtr->filePath);
-                if ( itrFileScope == fileScopeMap.end() )
-                {
-                    // adding a root file item
-                    hFileItem = addTreeViewItem( TVI_ROOT, createTagData(getFileName(tagPtr->filePath), -3) );
-                    itrFileScope = fileScopeMap.insert( std::make_pair(tagPtr->filePath, sScopeItem()) ).first;
-                    itrFileScope->second.hFileItem = hFileItem;
-
-                    setNodeItemExpanded(m_tvTags, hFileItem);
-                }
-                else
-                    hFileItem = itrFileScope->second.hFileItem;
-            }
-            else
-            {
-                if ( fileScopeMap.empty() )
-                {
-                    itrFileScope = fileScopeMap.insert( std::make_pair(tString(), sScopeItem()) ).first;
-                    itrFileScope->second.hFileItem = TVI_ROOT;
-                }
-                else
-                    itrFileScope = fileScopeMap.begin();
-            }
-
-            std::map<tString, HTREEITEM>& scopeMap = itrFileScope->second.scopeMap;
-            auto scopeIt = scopeMap.find(!tagPtr->tagScope.empty() ? tagPtr->tagScope : tagPtr->tagName);
-            if ( scopeIt != scopeMap.end() && !tagPtr->tagScope.empty() )
+            auto scopeIt = scopeMap.find(!pTag->tagScope.empty() ? pTag->tagScope : pTag->tagName);
+            if ( scopeIt != scopeMap.end() && !pTag->tagScope.empty() )
             {
                 HTREEITEM hScopeItem = scopeIt->second;
 
-                if ( !tagPtr->tagScope.empty() )
+                if ( !pTag->tagScope.empty() )
                 {
-                    HTREEITEM hItem = addTreeViewItem(hScopeItem, *tagPtr);
-                    tagPtr->data.p = (void *) hItem;
+                    HTREEITEM hItem = addTreeViewItem(hScopeItem, pTag->tagName, pTag);
+                    pTag->data.p = (void *) hItem;
                 }
             }
             else
             {
                 HTREEITEM hScopeItem = hFileItem;
 
-                if ( !tagPtr->tagScope.empty() )
+                if ( !pTag->tagScope.empty() )
                 {
                     // adding a scope item
-                    hScopeItem = addTreeViewItem( hFileItem, createTagData(tagPtr->tagScope, -2) );
-                    scopeMap[tagPtr->tagScope] = hScopeItem;
+                    hScopeItem = addTreeViewItem(hFileItem, pTag->tagScope, nullptr);
+                    scopeMap[pTag->tagScope] = hScopeItem;
 
                     if ( !m_tagFilter.empty() )
                         setNodeItemExpanded(m_tvTags, hScopeItem);
                 }
 
-                HTREEITEM hItem = addTreeViewItem(hScopeItem, *tagPtr);
-                if ( tagPtr->tagScope.empty() )
+                HTREEITEM hItem = addTreeViewItem(hScopeItem, pTag->tagName, pTag);
+                if ( pTag->tagScope.empty() )
                 {
                     // a scope item has been added
-                    scopeMap[tagPtr->tagName] = hItem;
+                    scopeMap[pTag->tagName] = hItem;
 
                     if ( !m_tagFilter.empty() )
                         setNodeItemExpanded(m_tvTags, hItem);
                 }
 
-                tagPtr->data.p = (void *) hItem;
+                pTag->data.p = (void *) hItem;
             }
-        }
-        else
-        {
-            int n = addListViewItem(nItem++, *tagPtr);
-            tagPtr->data.i = n;
         }
     }
 }

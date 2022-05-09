@@ -47,7 +47,14 @@ class CTagsResultParser
                 void* p;
                 int   i;
             } data;
-            void* pTagData;
+
+            tTagData(const t_string& tagName_, const t_string& tagPattern_, const t_string& tagType_,
+                     const t_string& tagScope_, const t_string& filePath_, int line_, int end_line_)
+              : tagName(tagName_), tagPattern(tagPattern_), tagType(tagType_),
+                tagScope(tagScope_), filePath(filePath_), line(line_), end_line(end_line_)
+            {
+                data.p = nullptr;
+            }
 
             t_string getFullTagName() const
             {
@@ -64,16 +71,8 @@ class CTagsResultParser
 
         };
 
-        typedef std::multimap<int, tTagData> file_tags_map; // tags within a file
-        typedef std::vector<tTagData*> file_tags_vec;
-
-        struct tFileTags
-        {
-            file_tags_map tagsMap;
-            file_tags_vec tagsVec;
-        };
-
-        typedef std::map<t_string, tFileTags, string_cmp_less> tags_map; // tags in multiple files
+        typedef std::vector<tTagData*> file_tags; // tags within a file
+        typedef std::map<t_string, file_tags, string_cmp_less> tags_map; // tags in multiple files
 
         enum eParseFlags {
             PF_ISUTF8 = 0x01
