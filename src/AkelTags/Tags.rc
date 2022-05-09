@@ -44,7 +44,7 @@ FONT 8, "Ms Shell Dlg"
     AUTOCHECKBOX    "Use Editor colors", IDC_CH_OPT_EDITORCOLORS, 5, 26, 175, 8, 0, WS_EX_LEFT
     AUTOCHECKBOX    "Show tooltips", IDC_CH_OPT_SHOWTOOLTIPS, 5, 38, 175, 8, 0, WS_EX_LEFT
     AUTOCHECKBOX    "ctags: output to stdout instead of temp file", IDC_CH_OPT_CTAGSSTDOUT, 5, 54, 175, 8, 0, WS_EX_LEFT
-    AUTOCHECKBOX    "Scan all files in a folder", IDC_CH_OPT_SCANFOLDER, 5, 66, 175, 8, 0, WS_EX_LEFT
+    AUTOCHECKBOX    "Scan similar files in a folder", IDC_CH_OPT_SCANFOLDER, 5, 66, 175, 8, 0, WS_EX_LEFT
     // Note: the recursive scanning may generate a tag file of several MB that takes toooooo long to visualize
     //AUTOCHECKBOX    "Scan folders recursively", IDC_CH_OPT_SCANFOLDERRECURSIVELY, 5, 78, 175, 8, 0, WS_EX_LEFT
 }
