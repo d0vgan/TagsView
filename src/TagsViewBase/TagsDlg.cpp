@@ -2365,13 +2365,20 @@ size_t CTagsDlg::getNumTotalItemsForSorting() const
     size_t nItemsToReserve = nTotalItems;
     if ( nTotalItems != 0 && !m_tagFilter.empty() )
     {
-        size_t nDivider = 1;
-        for ( size_t i = m_tagFilter.length(); i != 0; --i )
+        if ( m_tagFilter.length() < 10 )
         {
-            nDivider *= 4;
+            size_t nDivider = 1;
+            for ( size_t i = m_tagFilter.length(); i != 0; --i )
+            {
+                nDivider *= 4;
+            }
+            nItemsToReserve /= nDivider;
+            nItemsToReserve = 16*(1 + nItemsToReserve/16);
         }
-        nItemsToReserve /= nDivider;
-        nItemsToReserve = 16*(1 + nItemsToReserve/16);
+        else
+        {
+            nItemsToReserve = 0;
+        }
     }
 
     return nItemsToReserve;
@@ -2382,13 +2389,19 @@ size_t  CTagsDlg::getNumItemsForSorting(const CTagsDlg::file_tags& fileTags) con
     size_t nItemsToReserve = fileTags.size();
     if ( nItemsToReserve != 0 && !m_tagFilter.empty() )
     {
-        size_t nDivider = 1;
-        for ( size_t i = m_tagFilter.length(); i != 0; --i )
+        if ( m_tagFilter.length() < 10 )
         {
-            nDivider *= 4;
+            size_t nDivider = 1;
+            for ( size_t i = m_tagFilter.length(); i != 0; --i )
+            {
+                nDivider *= 4;
+            }
+            nItemsToReserve /= nDivider;
         }
-        nItemsToReserve /= nDivider;
-
+        else
+        {
+            nItemsToReserve = 0;
+        }
     }
     return nItemsToReserve;
 }
