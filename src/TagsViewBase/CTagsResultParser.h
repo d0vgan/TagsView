@@ -3,8 +3,8 @@
 //---------------------------------------------------------------------------
 #include <string>
 #include <map>
-#include <set>
 #include <vector>
+#include <memory>
 #include <wchar.h>
 #include <tchar.h>
 #include <Windows.h>
@@ -71,7 +71,7 @@ class CTagsResultParser
 
         };
 
-        typedef std::vector<tTagData*> file_tags; // tags within a file
+        typedef std::vector<std::unique_ptr<tTagData>> file_tags; // tags within a file
         typedef std::map<t_string, file_tags, string_cmp_less> tags_map; // tags in multiple files
 
         enum eParseFlags {
@@ -81,12 +81,11 @@ class CTagsResultParser
         struct tParseContext
         {
             tags_map& m; // output tags map
-            std::set<t_string>& relatedFiles; // output related files
             t_string inputDir; // input directory
             t_string inputFileOverride; // input file override, use it only to override a temp file name
 
-            tParseContext(tags_map& m_, std::set<t_string>& relatedFiles_, const t_string& inputDir_, const t_string& inputFileOverride_)
-              : m(m_), relatedFiles(relatedFiles_), inputDir(inputDir_), inputFileOverride(inputFileOverride_)
+            tParseContext(tags_map& m_, const t_string& inputDir_, const t_string& inputFileOverride_)
+              : m(m_), inputDir(inputDir_), inputFileOverride(inputFileOverride_)
             {
             }
         };

@@ -107,6 +107,32 @@ CTagsViewPlugin::t_string CTagsViewPlugin::ewGetFilePathName() const
     return fileName;
 }
 
+CTagsViewPlugin::file_set CTagsViewPlugin::ewGetOpenedFilePaths() const
+{
+    file_set openedFiles;
+
+    int nOpenedFiles = (int) SendNppMsg(NPPM_GETNBOPENFILES, 0, ALL_OPEN_FILES);
+    if ( nOpenedFiles > 0 )
+    {
+        const int nMaxPathSize = 512;
+        std::vector<TCHAR*> filePaths(nOpenedFiles);
+        for ( TCHAR*& p : filePaths )
+        {
+            p = new TCHAR[nMaxPathSize];
+        }
+
+        SendNppMsg(NPPM_GETOPENFILENAMES, (WPARAM) filePaths.data(), nOpenedFiles );
+
+        for ( TCHAR*& p : filePaths )
+        {
+            openedFiles.insert( t_string(p) );
+            delete [] p;
+        }
+    }
+
+    return openedFiles;
+}
+
 int CTagsViewPlugin::ewGetLineFromPos(int pos) const
 {
     return (int) ::SendMessage( ewGetEditHwnd(), SCI_LINEFROMPOSITION, pos, 0 );
@@ -276,6 +302,7 @@ void CTagsViewPlugin::OnHideTagsDlg()
     ewClearNavigationHistory(true);
     clearCurrentFilePathName();
     GetTagsDlg().ClearItems(true);
+    GetTagsDlg().ClearCachedTags();
 }
 
 void CTagsViewPlugin::Initialize(HINSTANCE hInstance)

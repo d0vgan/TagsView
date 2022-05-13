@@ -44,8 +44,12 @@ class CNppTagsDlg : public CTagsDlg
                 {
                     if ( LOWORD(pnmh->code) == DMN_CLOSE )
                     {
-                        ::SendMessage( m_hNppWnd, NPPM_SETMENUITEMCHECK,
-                            FUNC_ARRAY[EFI_TAGSVIEW]._cmdID, FALSE );
+                        ::SendMessage( m_hNppWnd, NPPM_SETMENUITEMCHECK, FUNC_ARRAY[EFI_TAGSVIEW]._cmdID, FALSE );
+                        if ( m_pEdWr )
+                        {
+                            m_pEdWr->ewClearNavigationHistory(true);
+                        }
+                        ClearCachedTags();
                         return 0;
                     }
                 }
@@ -96,6 +100,8 @@ class CTagsViewPlugin : public CWinApp, public CEditorWrapper
 
         // current file pathname (e.g. "C:\My Project\File Name.cpp")
         virtual t_string ewGetFilePathName() const override;
+
+        virtual file_set ewGetOpenedFilePaths() const override;
 
         virtual int ewGetLineFromPos(int pos) const override; // 0-based
 

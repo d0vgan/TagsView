@@ -4,7 +4,6 @@
 #include "win32++/include/wxx_textconv.h"
 #include <memory>
 #include <set>
-#include <list>
 #include <algorithm>
 
 namespace
@@ -257,40 +256,14 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                         const CTagsDlg::tTagData* pTagData = (const CTagsDlg::tTagData *) lvi.lParam;
                         if ( pTagData )
                         {
-                            if ( !pTagData->filePath.empty() )
+                            m_pDlg->PostMessage(CTagsDlg::WM_TAGDBLCLICKED, 0, (LPARAM) pTagData);
+
+                            LRESULT lResult = 0;
+                            if ( uMsg == WM_LBUTTONDBLCLK )
                             {
-                                const tString& filePath = pTagData->filePath;
-                                tString currFilePath = m_pDlg->m_pEdWr->ewGetFilePathName();
-                                if ( lstrcmpi(filePath.c_str(), currFilePath.c_str()) != 0 )
-                                {
-                                    m_pDlg->m_isUpdatingSelToItem = true;
-                                    m_pDlg->m_pEdWr->ewDoOpenFile(filePath.c_str());
-                                }
+                                lResult = WndProcDefault(uMsg, wParam, lParam);
                             }
-
-                            const int line = pTagData->line;
-                            if ( line >= 0 )
-                            {
-                                m_pDlg->m_isUpdatingSelToItem = true;
-                                m_pDlg->m_pEdWr->ewSetNavigationPoint( _T("") );
-                                //m_pDlg->UpdateNavigationButtons();
-
-                                int pos = m_pDlg->m_pEdWr->ewGetPosFromLine(line - 1);
-                                m_pDlg->m_prevSelStart = pos;
-                                m_pDlg->m_pEdWr->ewDoSetSelection(pos, pos);
-
-                                m_pDlg->m_pEdWr->ewSetNavigationPoint( _T("") );
-                                m_pDlg->UpdateNavigationButtons();
-
-                                LRESULT lResult = 0;
-                                if ( uMsg == WM_LBUTTONDBLCLK )
-                                {
-                                    lResult = WndProcDefault(uMsg, wParam, lParam);
-                                }
-                                m_pDlg->m_pEdWr->ewDoSetFocus();
-                                m_pDlg->m_isUpdatingSelToItem = false;
-                                return lResult;
-                            }
+                            return lResult;
                         }
                     }
                 }
@@ -404,40 +377,14 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                     const CTagsDlg::tTagData* pTagData = (const CTagsDlg::tTagData *) tvi.lParam;
                     if ( pTagData )
                     {
-                        if ( !pTagData->filePath.empty() )
+                        m_pDlg->PostMessage(CTagsDlg::WM_TAGDBLCLICKED, 0, (LPARAM) pTagData);
+
+                        LRESULT lResult = 0;
+                        if ( uMsg == WM_LBUTTONDBLCLK )
                         {
-                            const tString& filePath = pTagData->filePath;
-                            tString currFilePath = m_pDlg->m_pEdWr->ewGetFilePathName();
-                            if ( lstrcmpi(filePath.c_str(), currFilePath.c_str()) != 0 )
-                            {
-                                m_pDlg->m_isUpdatingSelToItem = true;
-                                m_pDlg->m_pEdWr->ewDoOpenFile(filePath.c_str());
-                            }
+                            lResult = WndProcDefault(uMsg, wParam, lParam);
                         }
-
-                        const int line = pTagData->line;
-                        if ( line >= 0 )
-                        {
-                            m_pDlg->m_isUpdatingSelToItem = true;
-                            m_pDlg->m_pEdWr->ewSetNavigationPoint( _T("") );
-                            //m_pDlg->UpdateNavigationButtons();
-
-                            int pos = m_pDlg->m_pEdWr->ewGetPosFromLine(line - 1);
-                            m_pDlg->m_prevSelStart = pos;
-                            m_pDlg->m_pEdWr->ewDoSetSelection(pos, pos);
-
-                            m_pDlg->m_pEdWr->ewSetNavigationPoint( _T("") );
-                            m_pDlg->UpdateNavigationButtons();
-
-                            LRESULT lResult = 0;
-                            if ( uMsg == WM_LBUTTONDBLCLK )
-                            {
-                                lResult = WndProcDefault(uMsg, wParam, lParam);
-                            }
-                            m_pDlg->m_pEdWr->ewDoSetFocus();
-                            m_pDlg->m_isUpdatingSelToItem = false;
-                            return lResult;
-                        }
+                        return lResult;
                     }
                 }
             }
@@ -552,6 +499,7 @@ CTagsDlg::CTagsDlg() : CDialog(IDD_MAIN)
 , m_viewMode(TVM_NONE)
 , m_sortMode(TSM_NONE)
 , m_dwLastTagsThreadID(0)
+, m_tags(nullptr)
 , m_optRdWr(NULL)
 , m_pEdWr(NULL)
 , m_prevSelStart(-1)
@@ -592,15 +540,6 @@ CTagsDlg::~CTagsDlg()
     {
         DeleteTempFile(m_ctagsTempOutputFilePath);
     }
-
-    for ( auto& fileItem : m_tags )
-    {
-        for ( tTagData* pTag : fileItem.second )
-        {
-            delete pTag;
-        }
-    }
-    m_tags.clear();
 }
 
 void CTagsDlg::DeleteTempFile(const tString& filePath)
@@ -717,9 +656,13 @@ INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch ( uMsg )
     {
-        /*case WM_ADDTAGS:
-            OnAddTags( (const char *) lParam) );
-            return 0;*/
+        case WM_TAGDBLCLICKED:
+            OnTagDblClicked( (const tTagData *) lParam );
+            return 0;
+
+        case WM_FILECLOSED:
+            OnFileClosed();
+            return 0;
 
         case WM_UPDATETAGSVIEW:
             UpdateTagsView();
@@ -779,8 +722,6 @@ void CTagsDlg::EndDialog(INT_PTR nResult)
 
 void CTagsDlg::OnAddTags(const char* s, const tCTagsThreadParam* tt)
 {
-    std::set<tString> relatedFiles;
-
     unsigned int nParseFlags = 0;
     if ( tt->isUTF8 )
     {
@@ -791,20 +732,11 @@ void CTagsDlg::OnAddTags(const char* s, const tCTagsThreadParam* tt)
         s,
         nParseFlags,
         CTagsResultParser::tParseContext(
-            m_tags,
-            relatedFiles,
+            *m_tags,
             getFileDirectory(tt->source_file_name),
             tt->temp_input_file.empty() ? tString() : tt->source_file_name
         ) 
     );
-
-    if ( !relatedFiles.empty() )
-    {
-        for ( auto& relatedFile : relatedFiles )
-        {
-            m_pEdWr->ewAddRelatedFile(relatedFile);
-        }
-    }
 
     // let's update tags view in the primary thread
     ::SendNotifyMessage( this->GetHwnd(), WM_UPDATETAGSVIEW, 0, 0 );
@@ -843,7 +775,7 @@ BOOL CTagsDlg::OnCommand(WPARAM wParam, LPARAM lParam)
             break;
 
         case IDM_CLOSE:
-            PostMessage(WM_CLOSETAGSVIEW);
+            this->PostMessage(WM_CLOSETAGSVIEW);
             break;
     }
 
@@ -1169,15 +1101,15 @@ void CTagsDlg::OnParseClicked()
     if ( m_pEdWr )
     {
         m_pEdWr->ewClearNavigationHistory(false);
-        m_pEdWr->ewDoParseFile();
+        m_pEdWr->ewDoParseFile(true);
     }
 }
 
 bool CTagsDlg::GoToTag(const tString& filePath, const TCHAR* cszTagName)  // not implemented yet
 {
-    if ( cszTagName && cszTagName[0] && !m_tags.empty() )
+    if ( cszTagName && cszTagName[0] && m_tags && !m_tags->empty() )
     {
-        CTagsResultParser::file_tags& fileTags = m_tags[filePath];
+        CTagsResultParser::file_tags& fileTags = (*m_tags)[filePath];
         CTagsResultParser::file_tags::iterator itr = getTagByName(fileTags, cszTagName);
         if ( itr != fileTags.end() )
         {
@@ -1666,181 +1598,202 @@ namespace
     }
 }
 
-void CTagsDlg::ParseFile(const TCHAR* const cszFileName)
+void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFile)
 {
+    if ( !cszFileName )
+    {
+        ClearItems(true);
+        m_tags = nullptr;
+        return;
+    }
+
+    bool bJustAdded = false;
+    tags_map* prev_tags = m_tags;
+    m_tags = getCachedTagsMap(cszFileName, true, bJustAdded);
+
+    if ( !bJustAdded && !bReparsePhysicalFile )
+    {
+        if ( m_tags != prev_tags )
+        {
+            ClearItems(true);
+            ::SendNotifyMessage( this->GetHwnd(), WM_UPDATETAGSVIEW, 0, 0 );
+        }
+        else
+        {
+            UpdateCurrentItem();
+        }
+        return;
+    }
+
     ClearItems(true);
 
-    if ( isFileExist(cszFileName) )
+    if ( !isFileExist(cszFileName) )
+        return;
+
+    TCHAR szExt[20];
+    szExt[0] = 0;
+
+    const TCHAR* pszExt = getFileExt(cszFileName);
+    if ( *pszExt )
     {
-        TCHAR szExt[20];
-        szExt[0] = 0;
+        lstrcpyn(szExt, pszExt, 18);
 
-        const TCHAR* pszExt = getFileExt(cszFileName);
-        if ( *pszExt )
+        int nLen = 0;
+        const TCHAR* pszSkipFileExts = m_opt.getStr(OPT_CTAGS_SKIPFILEEXTS, &nLen);
+        if ( pszSkipFileExts && pszSkipFileExts[0] )
         {
-            lstrcpyn(szExt, pszExt, 18);
+            std::unique_ptr<TCHAR[]> pSkipExts(new TCHAR[nLen + 1]);
+            lstrcpy(pSkipExts.get(), pszSkipFileExts);
 
-            int nLen = 0;
-            const TCHAR* pszSkipFileExts = m_opt.getStr(OPT_CTAGS_SKIPFILEEXTS, &nLen);
-            if ( pszSkipFileExts && pszSkipFileExts[0] )
-            {
-                std::unique_ptr<TCHAR[]> pSkipExts(new TCHAR[nLen + 1]);
-                lstrcpy(pSkipExts.get(), pszSkipFileExts);
+            ::CharLower(pSkipExts.get());
+            ::CharLower(szExt);
 
-                ::CharLower(pSkipExts.get());
-                ::CharLower(szExt);
-
-                if ( wcsstr(pSkipExts.get(), szExt) != NULL )
-                    return;
-            }
+            if ( wcsstr(pSkipExts.get(), szExt) != NULL )
+                return;
         }
+    }
 
-        tString ctagsOptPath = m_ctagsExeFilePath;
-        if ( ctagsOptPath.length() > 3 )
+    tString ctagsOptPath = m_ctagsExeFilePath;
+    if ( ctagsOptPath.length() > 3 )
+    {
+        tString::size_type len = ctagsOptPath.length();
+        ctagsOptPath[len - 3] = _T('o');
+        ctagsOptPath[len - 2] = _T('p');
+        ctagsOptPath[len - 1] = _T('t');
+        if ( !isFileExist(ctagsOptPath.c_str()) )
         {
-            tString::size_type len = ctagsOptPath.length();
-            ctagsOptPath[len - 3] = _T('o');
-            ctagsOptPath[len - 2] = _T('p');
-            ctagsOptPath[len - 1] = _T('t');
-            if ( !isFileExist(ctagsOptPath.c_str()) )
-            {
-                // file does not exist - so don't use it
-                ctagsOptPath.clear();
-            }
-        }
-        else
-        {
-            // shit happened? ;)
+            // file does not exist - so don't use it
             ctagsOptPath.clear();
         }
-
-        tCTagsThreadParam* tt = new tCTagsThreadParam;
-        tt->pDlg = this;
-        tt->source_file_name = cszFileName;
-
-        createUniqueTempFilesIfNeeded(cszFileName, tt);
-
-        if ( tt->temp_input_file != m_ctagsTempInputFilePath )
-        {
-            if ( m_opt.getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
-            {
-                DeleteTempFile(m_ctagsTempInputFilePath);
-            }
-            m_ctagsTempInputFilePath = tt->temp_input_file;
-        }
-
-        if ( tt->temp_output_file != m_ctagsTempOutputFilePath )
-        {
-            if ( m_opt.getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
-            {
-                DeleteTempFile(m_ctagsTempOutputFilePath);
-            }
-            m_ctagsTempOutputFilePath = tt->temp_output_file;
-        }
-
-        // ctags command line:
-        //
-        //   --options=<pathname> 
-        //       Read additional options from file or directory.
-        //
-        //   -f -
-        //       tags are written to standard output.
-        //
-        //   --fields=fKnste
-        //       file/f       Indicates that the tag has file-limited visibility.
-        //       K            Kind of tag as long-name.
-        //       line/n       The line number where name is defined or referenced in input.
-        //       s            Scope of tag definition.
-        //       typeref/t    Type and name of a variable, typedef, or return type of callable like function as typeref: field.
-        //       end/e        Indicates the line number of the end lines of the language object.
-        //
-        tt->cmd_line.clear();
-        tt->cmd_line.reserve(512);
-        tt->cmd_line += _T("\"");
-        tt->cmd_line += m_ctagsExeFilePath;
-        if ( !ctagsOptPath.empty() )
-        {
-            tt->cmd_line += _T("\" --options=\"");
-            tt->cmd_line += ctagsOptPath;
-        }
-        tt->cmd_line += _T("\" -f ");
-        if ( tt->temp_output_file.empty() )
-        {
-            tt->cmd_line += _T("-");
-        }
-        else
-        {
-            tt->cmd_line += _T("\"");
-            tt->cmd_line += tt->temp_output_file;
-            tt->cmd_line += _T("\"");
-        }
-        tt->cmd_line += _T(" --fields=fKnste ");
-        if ( tt->temp_input_file.empty() )
-        {
-            if ( !m_opt.getBool(OPT_CTAGS_SCANFOLDER) )
-            {
-                tt->cmd_line += _T("\"");
-                tt->cmd_line += tt->source_file_name;
-                tt->cmd_line += _T("\"");
-
-                std::list<tString> relatedFiles = getRelatedSourceFiles(tt->source_file_name);
-                if ( !relatedFiles.empty() )
-                {
-                    for ( auto& relatedFile : relatedFiles )
-                    {
-                        tt->cmd_line += _T(" \"");
-                        tt->cmd_line += relatedFile;
-                        tt->cmd_line += _T("\"");
-                        m_pEdWr->ewAddRelatedFile(relatedFile);
-                    }
-                    m_pEdWr->ewAddRelatedFile(tt->source_file_name);
-                }
-            }
-            else
-            {
-                if ( m_opt.getBool(OPT_CTAGS_SCANFOLDERRECURSIVELY) )
-                {
-                    // Note: the recursive scanning may generate a tag file of several MB that takes toooooo long to visualize
-                    // TODO: consider virtual TreeView & ListView
-                    //tt->cmd_line += _T("--recurse=yes ");
-                }
-
-                tString ctagsLang = getCtagsLangFamily(tt->source_file_name);
-                if ( !ctagsLang.empty() )
-                {
-                    tt->cmd_line += _T("--languages=\"");
-                    tt->cmd_line += ctagsLang;
-                    tt->cmd_line += _T("\" ");
-                }
-
-                size_t n = tt->source_file_name.find_last_of(_T("\\/"));
-                tString source_dir(tt->source_file_name.c_str(), n + 2); // ends with "\X" or "/X"
-                source_dir.back() = _T('*'); // now ends with "\*" or "/*"
-
-                tt->cmd_line += _T("\"");
-                tt->cmd_line += source_dir;
-                tt->cmd_line += _T("\"");
-
-                m_pEdWr->ewAddRelatedFile(tt->source_file_name);
-            }
-        }
-        else
-        {
-            tt->cmd_line += _T("\"");
-            tt->cmd_line += tt->temp_input_file;
-            tt->cmd_line += _T("\"");
-        }
-
-        ::ResetEvent(m_hTagsThreadEvent);
-        HANDLE hThread = ::CreateThread(NULL, 0, CTagsThreadProc, tt, 0, &tt->dwThreadID);
-        if ( hThread )
-        {
-            ::InterlockedIncrement(&m_nTagsThreadCount);
-            m_dwLastTagsThreadID = tt->dwThreadID;
-            ::CloseHandle(hThread);
-        }
-        ::SetEvent(m_hTagsThreadEvent);
     }
+    else
+    {
+        // shit happened? ;)
+        ctagsOptPath.clear();
+    }
+
+    tCTagsThreadParam* tt = new tCTagsThreadParam;
+    tt->pDlg = this;
+    tt->source_file_name = cszFileName;
+
+    createUniqueTempFilesIfNeeded(cszFileName, tt);
+
+    if ( tt->temp_input_file != m_ctagsTempInputFilePath )
+    {
+        if ( m_opt.getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
+        {
+            DeleteTempFile(m_ctagsTempInputFilePath);
+        }
+        m_ctagsTempInputFilePath = tt->temp_input_file;
+    }
+
+    if ( tt->temp_output_file != m_ctagsTempOutputFilePath )
+    {
+        if ( m_opt.getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
+        {
+            DeleteTempFile(m_ctagsTempOutputFilePath);
+        }
+        m_ctagsTempOutputFilePath = tt->temp_output_file;
+    }
+
+    // ctags command line:
+    //
+    //   --options=<pathname> 
+    //       Read additional options from file or directory.
+    //
+    //   -f -
+    //       tags are written to standard output.
+    //
+    //   --fields=fKnste
+    //       file/f       Indicates that the tag has file-limited visibility.
+    //       K            Kind of tag as long-name.
+    //       line/n       The line number where name is defined or referenced in input.
+    //       s            Scope of tag definition.
+    //       typeref/t    Type and name of a variable, typedef, or return type of callable like function as typeref: field.
+    //       end/e        Indicates the line number of the end lines of the language object.
+    //
+    tt->cmd_line.clear();
+    tt->cmd_line.reserve(512);
+    tt->cmd_line += _T("\"");
+    tt->cmd_line += m_ctagsExeFilePath;
+    if ( !ctagsOptPath.empty() )
+    {
+        tt->cmd_line += _T("\" --options=\"");
+        tt->cmd_line += ctagsOptPath;
+    }
+    tt->cmd_line += _T("\" -f ");
+    if ( tt->temp_output_file.empty() )
+    {
+        tt->cmd_line += _T("-");
+    }
+    else
+    {
+        tt->cmd_line += _T("\"");
+        tt->cmd_line += tt->temp_output_file;
+        tt->cmd_line += _T("\"");
+    }
+    tt->cmd_line += _T(" --fields=fKnste ");
+    if ( tt->temp_input_file.empty() )
+    {
+        if ( !m_opt.getBool(OPT_CTAGS_SCANFOLDER) )
+        {
+            tt->cmd_line += _T("\"");
+            tt->cmd_line += tt->source_file_name;
+            tt->cmd_line += _T("\"");
+
+            std::list<tString> relatedFiles = getRelatedSourceFiles(tt->source_file_name);
+            if ( !relatedFiles.empty() )
+            {
+                for ( auto& relatedFile : relatedFiles )
+                {
+                    tt->cmd_line += _T(" \"");
+                    tt->cmd_line += relatedFile;
+                    tt->cmd_line += _T("\"");
+                }
+            }
+        }
+        else
+        {
+            if ( m_opt.getBool(OPT_CTAGS_SCANFOLDERRECURSIVELY) )
+            {
+                // Note: the recursive scanning may generate a tag file of several MB that takes toooooo long to visualize
+                // TODO: consider virtual TreeView & ListView
+                //tt->cmd_line += _T("--recurse=yes ");
+            }
+
+            tString ctagsLang = getCtagsLangFamily(tt->source_file_name);
+            if ( !ctagsLang.empty() )
+            {
+                tt->cmd_line += _T("--languages=\"");
+                tt->cmd_line += ctagsLang;
+                tt->cmd_line += _T("\" ");
+            }
+
+            size_t n = tt->source_file_name.find_last_of(_T("\\/"));
+            tString source_dir(tt->source_file_name.c_str(), n + 2); // ends with "\X" or "/X"
+            source_dir.back() = _T('*'); // now ends with "\*" or "/*"
+
+            tt->cmd_line += _T("\"");
+            tt->cmd_line += source_dir;
+            tt->cmd_line += _T("\"");
+        }
+    }
+    else
+    {
+        tt->cmd_line += _T("\"");
+        tt->cmd_line += tt->temp_input_file;
+        tt->cmd_line += _T("\"");
+    }
+
+    ::ResetEvent(m_hTagsThreadEvent);
+    HANDLE hThread = ::CreateThread(NULL, 0, CTagsThreadProc, tt, 0, &tt->dwThreadID);
+    if ( hThread )
+    {
+        ::InterlockedIncrement(&m_nTagsThreadCount);
+        m_dwLastTagsThreadID = tt->dwThreadID;
+        ::CloseHandle(hThread);
+    }
+    ::SetEvent(m_hTagsThreadEvent);
 }
 
 void CTagsDlg::ReparseCurrentFile()
@@ -1957,7 +1910,7 @@ void CTagsDlg::SetViewMode(eTagsViewMode viewMode, eTagsSortMode sortMode)
 
 void CTagsDlg::UpdateCurrentItem()
 {
-    if ( m_pEdWr && !m_tags.empty() && !m_isUpdatingSelToItem )
+    if ( m_pEdWr && m_tags && !m_tags->empty() && !m_isUpdatingSelToItem )
     {
         int selEnd, selStart = m_pEdWr->ewGetSelectionPos(selEnd);
 
@@ -1968,8 +1921,8 @@ void CTagsDlg::UpdateCurrentItem()
             int line = m_pEdWr->ewGetLineFromPos(selStart) + 1; // 1-based line
 
             const tString filePath = m_pEdWr->ewGetFilePathName();
-            auto fileItr = m_tags.find(filePath);
-            if ( fileItr == m_tags.end() )
+            auto fileItr = m_tags->find(filePath);
+            if ( fileItr == m_tags->end() )
             {
                 return;
             }
@@ -1979,7 +1932,19 @@ void CTagsDlg::UpdateCurrentItem()
             if ( itr == fileTags.end() )
             {
                 if ( itr != fileTags.begin() )
+                {
                     --itr;
+                    if ( line < (*itr)->line )
+                    {
+                        auto itrBegin = fileTags.begin();
+                        int diff_last = (*itr)->line - line;
+                        int diff_first = (*itrBegin)->line - line;
+                        if ( diff_first < 0 )
+                            diff_first = -diff_first;
+                        if ( diff_first < diff_last )
+                            itr = itrBegin;
+                    }
+                }
                 else
                     return;
             }
@@ -2019,6 +1984,11 @@ void CTagsDlg::UpdateCurrentItem()
 
 void CTagsDlg::UpdateTagsView()
 {
+    if ( m_tags && m_tags->size() == 0 )
+    {
+        m_tags->insert( std::make_pair(m_pEdWr->ewGetFilePathName(), file_tags()) );
+    }
+
     m_prevSelStart = -1;
 
     eTagsViewMode viewMode = m_viewMode;
@@ -2176,10 +2146,45 @@ void CTagsDlg::ClearItems(bool bDelayedRedraw )
     m_prevSelStart = -1;
 }
 
-void CTagsDlg::OnFileActivated()
+void CTagsDlg::ClearCachedTags()
 {
-    m_prevSelStart = -1;
-    UpdateNavigationButtons();
+    m_cachedTags.clear();
+    m_tags = nullptr;
+}
+
+void CTagsDlg::PurifyCachedTags()
+{
+    IEditorWrapper::file_set openedFiles = m_pEdWr->ewGetOpenedFilePaths();
+    std::list<std::list<tags_map>::const_iterator> itemsToDelete;
+
+    std::list<tags_map>::const_iterator itrEnd = m_cachedTags.end();
+    std::list<tags_map>::const_iterator itrTags = m_cachedTags.begin();
+    for ( ; itrTags != itrEnd; ++itrTags )
+    {
+        const tags_map& tagsMap = *itrTags;
+        auto itrFile = std::find_if(tagsMap.begin(), tagsMap.end(),
+            [&openedFiles](const tags_map::value_type& fileItem){ return (openedFiles.find(fileItem.first) != openedFiles.end()); }
+        );
+        if ( itrFile == tagsMap.end() )
+        {
+            itemsToDelete.push_back(itrTags);
+        }
+    }
+
+    for ( auto& itr : itemsToDelete )
+    {
+        m_cachedTags.erase(itr);
+    }
+
+    if ( m_cachedTags.empty() )
+    {
+        m_tags = nullptr;
+    }
+
+    if ( openedFiles.empty() )
+    {
+        ClearItems(true);
+    }
 }
 
 void CTagsDlg::OnSettingsChanged()
@@ -2201,6 +2206,46 @@ void CTagsDlg::OnSettingsChanged()
     }
 }
 
+void CTagsDlg::OnFileClosed()
+{
+    PurifyCachedTags();
+}
+
+void CTagsDlg::OnTagDblClicked(const tTagData* pTagData)
+{
+    if ( pTagData )
+    {
+        if ( !pTagData->filePath.empty() )
+        {
+            const tString& filePath = pTagData->filePath;
+            tString currFilePath = m_pEdWr->ewGetFilePathName();
+            if ( lstrcmpi(filePath.c_str(), currFilePath.c_str()) != 0 )
+            {
+                m_isUpdatingSelToItem = true;
+                m_pEdWr->ewDoOpenFile(filePath.c_str());
+            }
+        }
+
+        const int line = pTagData->line;
+        if ( line >= 0 )
+        {
+            m_isUpdatingSelToItem = true;
+            m_pEdWr->ewSetNavigationPoint( _T("") );
+            //UpdateNavigationButtons();
+
+            int pos = m_pEdWr->ewGetPosFromLine(line - 1);
+            m_prevSelStart = pos;
+            m_pEdWr->ewDoSetSelection(pos, pos);
+
+            m_pEdWr->ewSetNavigationPoint( _T("") );
+            UpdateNavigationButtons();
+
+            m_pEdWr->ewDoSetFocus();
+            m_isUpdatingSelToItem = false;
+        }
+    }
+}
+
 void CTagsDlg::checkCTagsExePath()
 {
     if ( !isFileExist(m_ctagsExeFilePath.c_str()) )
@@ -2215,7 +2260,7 @@ CTagsResultParser::file_tags::iterator CTagsDlg::getTagByLine(CTagsResultParser:
         fileTags.begin(),
         fileTags.end(),
         line,
-        [](const int line, const tTagData* pTag){ return (line < pTag->line); }
+        [](const int line, const std::unique_ptr<tTagData>& pTag){ return (line < pTag->line); }
     ); // returns an item with itr->second.line > line
 
     if ( itr == fileTags.end() && itr != fileTags.begin() )
@@ -2276,15 +2321,37 @@ CTagsResultParser::file_tags::iterator CTagsDlg::findTagByLine(CTagsResultParser
 
 CTagsResultParser::file_tags::iterator CTagsDlg::getTagByName(CTagsResultParser::file_tags& fileTags, const tString& tagName)
 {
-    CTagsResultParser::file_tags::iterator itr = fileTags.begin();
-    while ( itr != fileTags.end() )
+    return std::find_if(fileTags.begin(), fileTags.end(),
+        [&tagName](const std::unique_ptr<tTagData>& tag){ return (tag->tagName == tagName); }
+    );
+}
+
+std::list<CTagsResultParser::tags_map>::iterator CTagsDlg::getCachedTagsMapItr(const TCHAR* cszFileName, bool bAddIfNotExist, bool& bJustAdded)
+{
+    bJustAdded = false;
+
+    auto itrTags = std::find_if(m_cachedTags.begin(), m_cachedTags.end(),
+        [&cszFileName](const tags_map& tagsMap){ return (tagsMap.find(cszFileName) != tagsMap.end()); }
+    );
+    if ( itrTags != m_cachedTags.end() )
+        return itrTags;
+
+    if ( bAddIfNotExist )
     {
-        if ( (*itr)->tagName == tagName )
-            break;
-        else
-            ++itr;
+        bJustAdded = true;
+        m_cachedTags.push_back(tags_map());
+        itrTags = m_cachedTags.end();
+        --itrTags; // iterator to the last element
+        itrTags->insert( std::make_pair(tString(cszFileName), file_tags()) );
     }
-    return itr;
+
+    return itrTags;
+}
+
+CTagsResultParser::tags_map* CTagsDlg::getCachedTagsMap(const TCHAR* cszFileName, bool bAddIfNotExist, bool& bJustAdded)
+{
+    auto itrTags = getCachedTagsMapItr(cszFileName, bAddIfNotExist, bJustAdded);
+    return ( (itrTags != m_cachedTags.end()) ? &(*itrTags) : nullptr );
 }
 
 void CTagsDlg::initOptions()
@@ -2357,9 +2424,13 @@ bool CTagsDlg::isTagMatchFilter(const tString& tagName) const
 size_t CTagsDlg::getNumTotalItemsForSorting() const
 {
     size_t nTotalItems = 0;
-    for ( const auto& fileItem : m_tags )
+
+    if ( m_tags )
     {
-        nTotalItems += fileItem.second.size();
+        for ( const auto& fileItem : *m_tags )
+        {
+            nTotalItems += fileItem.second.size();
+        }
     }
 
     size_t nItemsToReserve = nTotalItems;
@@ -2408,15 +2479,18 @@ size_t  CTagsDlg::getNumItemsForSorting(const CTagsDlg::file_tags& fileTags) con
 
 void CTagsDlg::sortTagsByLineLV()
 {
+    if ( !m_tags )
+        return;
+
     int nItem = 0;
-    for ( auto& fileItem : m_tags )
+    for ( auto& fileItem : *m_tags )
     {
         CTagsResultParser::file_tags& fileTags = fileItem.second;
-        for ( tTagData* pTag : fileTags )
+        for ( std::unique_ptr<tTagData>& pTag : fileTags )
         {
             if ( m_tagFilter.empty() || isTagMatchFilter(pTag->getFullTagName()) )
             {
-                pTag->data.i = addListViewItem(nItem++, pTag);
+                pTag->data.i = addListViewItem(nItem++, pTag.get());
             }
             else
             {
@@ -2428,17 +2502,20 @@ void CTagsDlg::sortTagsByLineLV()
 
 void CTagsDlg::sortTagsByNameOrTypeLV(eTagsSortMode sortMode)
 {
+    if ( !m_tags )
+        return;
+
     std::vector<tTagData*> tags;
     tags.reserve(getNumTotalItemsForSorting());
 
-    for ( auto& fileItem : m_tags )
+    for ( auto& fileItem : *m_tags )
     {
         CTagsResultParser::file_tags& fileTags = fileItem.second;
-        for ( tTagData* pTag : fileTags )
+        for ( std::unique_ptr<tTagData>& pTag : fileTags )
         {
             if ( m_tagFilter.empty() || isTagMatchFilter(pTag->getFullTagName()) )
             {
-                tags.push_back(pTag);
+                tags.push_back(pTag.get());
             }
             else
             {
@@ -2457,7 +2534,17 @@ void CTagsDlg::sortTagsByNameOrTypeLV(eTagsSortMode sortMode)
     }
     else // if ( sortMode == TSM_TYPE )
     {
-        std::sort(
+        if ( m_sortMode == TSM_NAME )
+        {
+            // the previous sorting was by name, re-applying it first
+            std::sort(
+                tags.begin(),
+                tags.end(),
+                [](tTagData* pTag1, tTagData* pTag2){ return (pTag1->getFullTagName() < pTag2->getFullTagName()); }
+            );
+        }
+
+        std::stable_sort(
             tags.begin(),
             tags.end(),
             [](tTagData* pTag1, tTagData* pTag2){ return (pTag1->tagType < pTag2->tagType); }
@@ -2474,15 +2561,18 @@ void CTagsDlg::sortTagsByNameOrTypeLV(eTagsSortMode sortMode)
 
 void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
 {
+    if ( !m_tags )
+        return;
+
     struct tTagsByFile
     {
-        tString   filePath;
-        file_tags fileTags;
+        tString filePath;
+        std::vector<tTagData*> fileTags;
     };
 
     std::list<tTagsByFile> tags;
 
-    for ( auto& fileItem : m_tags )
+    for ( auto& fileItem : *m_tags )
     {
         CTagsResultParser::file_tags& fileTags = fileItem.second;
 
@@ -2490,11 +2580,11 @@ void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
         tagsByFile.filePath = fileItem.first;
         tagsByFile.fileTags.reserve(getNumItemsForSorting(fileTags));
 
-        for ( tTagData* pTag : fileTags )
+        for ( std::unique_ptr<tTagData>& pTag : fileTags )
         {
             if ( m_tagFilter.empty() || isTagMatchFilter(pTag->getFullTagName()) )
             {
-                tagsByFile.fileTags.push_back(pTag);
+                tagsByFile.fileTags.push_back(pTag.get());
             }
             else
             {
@@ -2549,7 +2639,7 @@ void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
         for ( tTagData* pTag : tagsByFile.fileTags )
         {
             auto scopeIt = scopeMap.find(!pTag->tagScope.empty() ? pTag->tagScope : pTag->tagName);
-            if ( scopeIt != scopeMap.end() && !pTag->tagScope.empty() )
+            if ( scopeIt != scopeMap.end() )
             {
                 HTREEITEM hScopeItem = scopeIt->second;
 

@@ -82,13 +82,12 @@ void CEditorWrapper::ewDoNavigateForward()
     }
 }
 
-void CEditorWrapper::ewDoParseFile()
+void CEditorWrapper::ewDoParseFile(bool bReparsePhysicalFile)
 {
-    m_relatedFilePaths.clear();
     if ( !getCurrentFilePathName().empty() )
     {
         if ( m_pDlg->GetHwnd() && m_pDlg->IsWindowVisible() )
-            m_pDlg->ParseFile( getCurrentFilePathName().c_str() );
+            m_pDlg->ParseFile( getCurrentFilePathName().c_str(), bReparsePhysicalFile );
     }
     else
     {
@@ -139,7 +138,6 @@ const CEditorWrapper::t_string& CEditorWrapper::getCurrentFilePathName()
 void CEditorWrapper::clearCurrentFilePathName()
 {
     m_currentFilePathName.clear();
-    m_relatedFilePaths.clear();
 }
 
 CEditorWrapper::t_string CEditorWrapper::ewGetNavigateBackwardHint()
@@ -207,32 +205,19 @@ void CEditorWrapper::ewOnFileActivated()
     if ( m_currentFilePathName != filePathName )
     {
         m_currentFilePathName = filePathName;
-        if ( m_relatedFilePaths.find(filePathName) == m_relatedFilePaths.end() )
-        {
-            ewDoParseFile();
-        }
-        else
-        {
-            m_pDlg->OnFileActivated();
-            ewOnSelectionChanged();
-        }
+        ewDoParseFile(false);
     }
 }
 
 void CEditorWrapper::ewOnFileClosed()
 {
     clearNavItem(m_currentFilePathName, true);
-    if ( m_relatedFilePaths.empty() )
+
+    m_currentFilePathName.clear();
+    if ( m_pDlg && m_pDlg->GetHwnd() && m_pDlg->IsWindowVisible() )
     {
-        m_currentFilePathName.clear();
-        if ( m_pDlg && m_pDlg->GetHwnd() && m_pDlg->IsWindowVisible() )
-        {
-            m_pDlg->ParseFile(NULL);
-        }
-    }
-    else
-    {
-        m_currentFilePathName.clear();
+        //m_pDlg->ParseFile(NULL, true);
+        m_pDlg->PostMessage(CTagsDlg::WM_FILECLOSED);
     }
 }
 
@@ -242,16 +227,9 @@ void CEditorWrapper::ewOnFileOpened()
     if ( m_currentFilePathName != filePathName )
     {
         m_currentFilePathName = filePathName;
-        if ( m_relatedFilePaths.find(filePathName) == m_relatedFilePaths.end() )
-        {
-            clearNavItem(m_currentFilePathName, false);
-            ewDoParseFile();
-        }
-        else
-        {
-            m_pDlg->OnFileActivated();
-            ewOnSelectionChanged();
-        }
+        clearNavItem(m_currentFilePathName, false);
+        ewDoParseFile(false);
+        //m_pDlg->PurifyCachedTags();
     }
 }
 
@@ -262,7 +240,7 @@ void CEditorWrapper::ewOnFileReloaded()
 
     if ( filePathName == getCurrentFilePathName() )
     {
-        ewDoParseFile();
+        ewDoParseFile(true);
     }
 }
 
@@ -274,7 +252,7 @@ void CEditorWrapper::ewOnFileSaved()
         if ( m_pDlg->GetOptions().getBool(CTagsDlg::OPT_BEHAVIOR_PARSEONSAVE) )
         {
             clearNavItem(filePathName, false);
-            ewDoParseFile();
+            ewDoParseFile(true);
         }
     }
 }
@@ -286,14 +264,4 @@ void CEditorWrapper::ewOnSelectionChanged()
     {
         m_pDlg->UpdateCurrentItem();
     }
-}
-
-void CEditorWrapper::ewAddRelatedFile(const t_string& filePathName)
-{
-    m_relatedFilePaths.insert(filePathName);
-}
-
-bool CEditorWrapper::ewHasRelatedFiles() const
-{
-    return (!m_relatedFilePaths.empty());
 }

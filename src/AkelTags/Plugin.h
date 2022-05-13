@@ -85,6 +85,9 @@ class CTagsViewPlugin : public CWinApp, public CEditorWrapper
         // current file pathname (e.g. "C:\My Project\File Name.cpp")
         virtual t_string ewGetFilePathName() const override;
 
+        // all opened files 
+        virtual file_set ewGetOpenedFilePaths() const override;
+
         virtual int ewGetLineFromPos(int pos) const override; // 0-based
 
         virtual int ewGetPosFromLine(int line) const override; // 0-based

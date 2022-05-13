@@ -10,7 +10,7 @@
 #include "win32++/include/wxx_criticalsection.h"
 #include <string>
 #include <map>
-#include <vector>
+#include <list>
 #include "EditorWrapper.h"
 #include "OptionsManager.h"
 #include "CTagsResultParser.h"
@@ -120,10 +120,11 @@ class CTagsDlg : public CDialog
         };
 
         enum eMsg {
-            /*WM_ADDTAGS         = (WM_USER + 7001),*/
             WM_UPDATETAGSVIEW  = (WM_USER + 7010),
             WM_CLOSETAGSVIEW   = (WM_USER + 7020),
-            WM_CTAGSPATHFAILED = (WM_USER + 7050)
+            WM_TAGDBLCLICKED   = (WM_USER + 7030),
+            WM_CTAGSPATHFAILED = (WM_USER + 7050),
+            WM_FILECLOSED      = (WM_USER + 7070)
         };
 
         enum eDeleteTempFile {
@@ -161,6 +162,7 @@ class CTagsDlg : public CDialog
 
         typedef CTagsResultParser::tTagData tTagData;
         typedef CTagsResultParser::file_tags file_tags;
+        typedef CTagsResultParser::tags_map tags_map;
 
         struct tCTagsThreadParam 
         {
@@ -184,7 +186,7 @@ class CTagsDlg : public CDialog
         const eTagsSortMode GetSortMode() const { return m_sortMode; }
         const eTagsViewMode GetViewMode() const { return m_viewMode; }
         bool  GoToTag(const tString& filePath, const TCHAR* cszTagName); // not implemented yet
-        void  ParseFile(const TCHAR* const cszFileName);
+        void  ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFile);
         void  ReparseCurrentFile();
         void  SetSortMode(eTagsSortMode sortMode);
         void  SetViewMode(eTagsViewMode viewMode, eTagsSortMode sortMode);
@@ -267,9 +269,11 @@ class CTagsDlg : public CDialog
 
         void ApplyColors();
         void ClearItems(bool bDelayedRedraw = false);
+        void ClearCachedTags();
+        void PurifyCachedTags();
 
-        void OnFileActivated();
         void OnSettingsChanged();
+        void OnTagDblClicked(const tTagData* pTagData);
 
     protected:
         virtual INT_PTR DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
@@ -280,6 +284,7 @@ class CTagsDlg : public CDialog
         virtual LRESULT OnNotify(WPARAM wParam, LPARAM lParam) override;
 
         void OnAddTags(const char* s, const tCTagsThreadParam* tt);
+        void OnFileClosed();
         BOOL OnInitDialog();
         void OnSize(bool bInitial = false);
         INT_PTR OnCtlColorEdit(WPARAM wParam, LPARAM lParam);
@@ -306,6 +311,8 @@ class CTagsDlg : public CDialog
         CTagsResultParser::file_tags::iterator getTagByLine(CTagsResultParser::file_tags& fileTags, const int line);
         CTagsResultParser::file_tags::iterator findTagByLine(CTagsResultParser::file_tags& fileTags, const int line);
         CTagsResultParser::file_tags::iterator getTagByName(CTagsResultParser::file_tags& fileTags, const tString& tagName);
+        std::list<CTagsResultParser::tags_map>::iterator getCachedTagsMapItr(const TCHAR* cszFileName, bool bAddIfNotExist, bool& bJustAdded);
+        CTagsResultParser::tags_map* getCachedTagsMap(const TCHAR* cszFileName, bool bAddIfNotExist, bool& bJustAdded);
 
         virtual void initOptions();
 
@@ -331,7 +338,8 @@ class CTagsDlg : public CDialog
         tString         m_ctagsExeFilePath;
         tString         m_ctagsTempInputFilePath;
         tString         m_ctagsTempOutputFilePath;
-        CTagsResultParser::tags_map m_tags;
+        tags_map*       m_tags;
+        std::list<tags_map> m_cachedTags;
         COptionsManager m_opt;
         COptionsReaderWriter* m_optRdWr;
         CEditorWrapper* m_pEdWr;

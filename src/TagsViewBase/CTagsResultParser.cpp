@@ -116,15 +116,7 @@ namespace
 void CTagsResultParser::Parse(const char* s, unsigned int nParseFlags, tParseContext& context)
 {
     tags_map& m = context.m;
-    std::set<t_string>& relatedFiles = context.relatedFiles;
 
-    for ( auto& fileItem : m )
-    {
-        for ( tTagData* pTag : fileItem.second )
-        {
-            delete pTag;
-        }
-    }
     m.clear();
 
     if ( !s )
@@ -312,12 +304,7 @@ void CTagsResultParser::Parse(const char* s, unsigned int nParseFlags, tParseCon
                     itrFileTags = m.insert( std::make_pair(pTag->filePath, file_tags()) ).first;
                     itrFileTags->second.reserve(256);
                 }
-
-                itrFileTags->second.push_back(pTag);
-                if ( !pTag->filePath.empty() )
-                {
-                    relatedFiles.insert(pTag->filePath);
-                }
+                itrFileTags->second.push_back(std::unique_ptr<tTagData>(pTag));
 
                 p = pn;
                 uParseState = EPS_TAGNAME;
@@ -335,7 +322,7 @@ void CTagsResultParser::Parse(const char* s, unsigned int nParseFlags, tParseCon
         std::sort(
             fileTags.begin(),
             fileTags.end(),
-            [](const tTagData* pTag1, const tTagData* pTag2){ return (pTag1->line < pTag2->line); }
+            [](const std::unique_ptr<tTagData>& pTag1, const std::unique_ptr<tTagData>& pTag2){ return (pTag1->line < pTag2->line); }
         );
     }
 }

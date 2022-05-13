@@ -13,6 +13,17 @@ class IEditorWrapper
     public:
         typedef std::basic_string<TCHAR> t_string;
 
+        class string_cmp_less
+        {
+            public:
+                bool operator() (const t_string& s1, const t_string& s2) const
+                {
+                    return (lstrcmpi(s1.c_str(), s2.c_str()) < 0);
+                }
+        };
+
+        typedef std::set<t_string, string_cmp_less> file_set;
+
         struct sEditorColors {
             COLORREF crTextColor;
             COLORREF crBkgndColor;
@@ -42,6 +53,9 @@ class IEditorWrapper
 
         // current file pathname (e.g. "C:\My Project\File Name.cpp")
         virtual t_string ewGetFilePathName() const = 0;
+
+        // all opened files 
+        virtual file_set ewGetOpenedFilePaths() const = 0;
 
         virtual int ewGetLineFromPos(int pos) const = 0; // 0-based
 
@@ -91,7 +105,7 @@ class CEditorWrapper : public IEditorWrapper
         virtual void ewDoNavigateForward();
 
         // (re)parse current file
-        void ewDoParseFile();
+        void ewDoParseFile(bool bReparsePhysicalFile);
 
         // returns "<FunctionName>, line <NN>:\n  <TextLine>"
         t_string ewGetNavigateBackwardHint();
@@ -113,9 +127,6 @@ class CEditorWrapper : public IEditorWrapper
 
         HWND ewGetMainHwnd() const { return m_hMainWnd; }
         void ewSetMainHwnd(HWND hWnd) { m_hMainWnd = hWnd; }
-
-        void ewAddRelatedFile(const t_string& filePathName);
-        bool ewHasRelatedFiles() const;
 
     protected:
         typedef struct sNavigationPoint {
@@ -243,7 +254,6 @@ class CEditorWrapper : public IEditorWrapper
         HWND      m_hMainWnd;
         t_navmap  m_navMap;
         t_string  m_currentFilePathName;
-        std::set<t_string> m_relatedFilePaths;
 };
 
 

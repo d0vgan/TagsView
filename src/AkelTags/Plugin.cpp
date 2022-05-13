@@ -362,7 +362,7 @@ void CTagsViewPlugin::ewDoSetSelection(int selStart, int selEnd)
         }
     }
 
-    ::SendMessage( hEdit, WM_SETREDRAW, (WPARAM) FALSE, 0 );
+    //::SendMessage( hEdit, WM_SETREDRAW, (WPARAM) FALSE, 0 );
     ::SendMessage( hEdit, EM_EXSETSEL, 0, (LPARAM) &cr );
     if ( bAkelEdit )
     {
@@ -380,9 +380,9 @@ void CTagsViewPlugin::ewDoSetSelection(int selStart, int selEnd)
         firstVisLine = (int) ::SendMessage( hEdit, EM_GETFIRSTVISIBLELINE, 0, 0 );
         ::SendMessage( hEdit, EM_LINESCROLL, 0, (selLine - firstVisLine) );
     }
-    ::SendMessage( hEdit, WM_SETREDRAW, (WPARAM) TRUE, 0 );
-    ::InvalidateRect( hEdit, NULL, TRUE );
-    ::UpdateWindow( hEdit );
+    //::SendMessage( hEdit, WM_SETREDRAW, (WPARAM) TRUE, 0 );
+    //::InvalidateRect( hEdit, NULL, TRUE );
+    //::UpdateWindow( hEdit );
 }
 
 HWND CTagsViewPlugin::ewGetEditHwnd() const
@@ -409,6 +409,26 @@ CTagsViewPlugin::t_string CTagsViewPlugin::ewGetFilePathName() const
     }
 
     return fileName;
+}
+
+CTagsViewPlugin::file_set CTagsViewPlugin::ewGetOpenedFilePaths() const
+{
+    file_set openedFiles;
+
+    FRAMEDATA* pFrame = (FRAMEDATA *) SendMessageW(m_hMainWnd, AKD_FRAMEFIND, FWF_CURRENT, 0);
+    if ( pFrame )
+    {
+        FRAMEDATA* pFrameInitial = pFrame;
+        for ( ; ; )
+        {
+            openedFiles.insert( t_string(pFrame->wszFile) );
+            pFrame = (FRAMEDATA *) SendMessageW(m_hMainWnd, AKD_FRAMEFIND, FWF_NEXT, (LPARAM) pFrame);
+            if ( pFrame == pFrameInitial )
+                break;
+        }
+    }
+
+    return openedFiles;
 }
 
 int CTagsViewPlugin::ewGetLineFromPos(int pos) const
@@ -550,6 +570,7 @@ void CTagsViewPlugin::ewCloseTagsView()
     clearCurrentFilePathName();
     Uninitialize(false);
     GetTagsDlg().ClearItems(true);
+    GetTagsDlg().ClearCachedTags();
 }
 
 void CTagsViewPlugin::ewDoNavigateBackward()
