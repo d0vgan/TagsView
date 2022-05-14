@@ -60,6 +60,10 @@ SETTINGS
   Show tooltips
   - TagsView shows tooltips in its TreeView and ListView.
 
+  Esc sets the focus to Editor
+  - When Esc is pressed in TagsView, the focus goes to the Editor's editing window.
+    (Note: you can always use Ctrl+BackSpace to clear the TagsView's filter).
+
   ctags: output to stdout instead of temp file
   - TagsView reads ctags' output from stdout instead of a temporary file.
     This is slower than reading from a temp file. Moreover, ctags generates a temp file anyway.
@@ -67,3 +71,49 @@ SETTINGS
   Scan similar files in a folder
   - TagsView instructs ctags to parse all the files with the similar extensions within the same folder.
     For example, it will parse all *.bat and *.cmd files at the same level as the opened .bat or .cmd file.
+
+
+MANUAL SETTINGS
+
+  Notepad++
+
+    [Ctags]
+    SkipFileExts=.txt
+
+      This setting specifies files extensions for which ctags will not be run.
+      You can specify several extensions separated by spaces e.g.: .txt .diz .ion
+
+    [Debug]
+    DeleteTempInputFiles=1
+    DeleteTempOutputFiles=1
+
+      These settings specify when the temporary files are deleted. Possible values:
+        0 - don't delete (for debug purpose)
+        1 - delete once no more needed
+        2 - preserve the last temp file until the next Parse() or exiting
+      Temporary files are created under your %TEMP% folder.
+      The temporary input files are created by TagsView for Unicode input files.
+      The names of temporary input files start with "npp_inp_".
+      The temporary output files are created by ctags.
+      The names of temporary output files start with "npptags_".
+
+  AkelPad
+
+    [Options]
+    Ctags\SkipFileExts=.txt
+
+      This setting specifies files extensions for which ctags will not be run.
+      You can specify several extensions separated by spaces e.g.: .txt .diz .ion
+
+    Debug\DeleteTempInputFiles=1
+    Debug\DeleteTempOutputFiles=1
+
+      These settings specify when the temporary files are deleted. Possible values:
+        0 - don't delete (for debug purpose)
+        1 - delete once no more needed
+        2 - preserve the last temp file until the next Parse() or exiting
+      Temporary files are created under your %TEMP% folder.
+      The temporary input files are created by TagsView for Unicode input files.
+      The names of temporary input files start with "akel_inp_".
+      The temporary output files are created by ctags.
+      The names of temporary output files start with "akeltags_".

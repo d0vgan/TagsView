@@ -797,7 +797,7 @@ void CTagsDlg::OnCancel()
     // that's we all love M$ for!
     m_edFilter.DirectMessage(WM_KEYDOWN, VK_ESCAPE, 0);
 
-    if ( ::GetFocus() != m_edFilter.GetHwnd() )
+    //if ( ::GetFocus() != m_edFilter.GetHwnd() )
     {
         if ( m_opt.getBool(OPT_VIEW_ESCFOCUSTOEDITOR) )
         {
