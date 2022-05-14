@@ -122,6 +122,7 @@ class CTagsDlg : public CDialog
         enum eMsg {
             WM_UPDATETAGSVIEW  = (WM_USER + 7010),
             WM_CLOSETAGSVIEW   = (WM_USER + 7020),
+            WM_FOCUSTOEDITOR   = (WM_USER + 7023),
             WM_TAGDBLCLICKED   = (WM_USER + 7030),
             WM_CTAGSPATHFAILED = (WM_USER + 7050),
             WM_FILECLOSED      = (WM_USER + 7070)
@@ -139,6 +140,7 @@ class CTagsDlg : public CDialog
             OPT_VIEW_WIDTH,
             OPT_VIEW_NAMEWIDTH,
             OPT_VIEW_SHOWTOOLTIPS,
+            OPT_VIEW_ESCFOCUSTOEDITOR,
 
             OPT_COLORS_USEEDITORCOLORS,
             //OPT_COLORS_BKGND,

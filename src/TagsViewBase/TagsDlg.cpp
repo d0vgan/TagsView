@@ -683,6 +683,13 @@ INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             }
             return 0;
 
+        case WM_FOCUSTOEDITOR:
+            if ( m_pEdWr )
+            {
+                m_pEdWr->ewDoSetFocus();
+            }
+            return 0;
+
         case WM_CTAGSPATHFAILED:
             if ( m_pEdWr )
             {
@@ -789,6 +796,14 @@ void CTagsDlg::OnCancel()
     // we also get here when Esc is pressed ANYWHERE in the dialog
     // that's we all love M$ for!
     m_edFilter.DirectMessage(WM_KEYDOWN, VK_ESCAPE, 0);
+
+    if ( ::GetFocus() != m_edFilter.GetHwnd() )
+    {
+        if ( m_opt.getBool(OPT_VIEW_ESCFOCUSTOEDITOR) )
+        {
+            PostMessage(WM_FOCUSTOEDITOR);
+        }
+    }
 }
 
 void CTagsDlg::createTooltips()
@@ -2368,11 +2383,12 @@ void CTagsDlg::initOptions()
     m_opt.ReserveMemory(OPT_COUNT);
 
     // View section
-    m_opt.AddInt( OPT_VIEW_MODE,          cszView,  _T("Mode"),         TVM_LIST );
-    m_opt.AddInt( OPT_VIEW_SORT,          cszView,  _T("Sort"),         TSM_LINE );
-    m_opt.AddInt( OPT_VIEW_WIDTH,         cszView,  _T("Width"),        220      );
-    m_opt.AddInt( OPT_VIEW_NAMEWIDTH,     cszView,  _T("NameWidth"),    220      );
-    m_opt.AddBool( OPT_VIEW_SHOWTOOLTIPS, cszView,  _T("ShowTooltips"), true     );
+    m_opt.AddInt( OPT_VIEW_MODE,              cszView,  _T("Mode"),             TVM_LIST );
+    m_opt.AddInt( OPT_VIEW_SORT,              cszView,  _T("Sort"),             TSM_LINE );
+    m_opt.AddInt( OPT_VIEW_WIDTH,             cszView,  _T("Width"),            220      );
+    m_opt.AddInt( OPT_VIEW_NAMEWIDTH,         cszView,  _T("NameWidth"),        220      );
+    m_opt.AddBool( OPT_VIEW_SHOWTOOLTIPS,     cszView,  _T("ShowTooltips"),     true     );
+    m_opt.AddBool( OPT_VIEW_ESCFOCUSTOEDITOR, cszView,  _T("EscFocusToEditor"), false    );
 
     // Colors section
     m_opt.AddBool( OPT_COLORS_USEEDITORCOLORS,  cszColors, _T("UseEditorColors"), true );

@@ -9,6 +9,7 @@ cd .\Release
 %ARC_EXE% u -tzip ..\%ZIP_FILE% @..\%PROJECT_NAME%_zip_dll.files -mx5
 cd ..
 %ARC_EXE% a -tzip %ZIP_FILE% .\Plugin\ -mx5
+%ARC_EXE% a -tzip %ZIP_FILE% .\TagsView_History.txt .\TagsView_Readme.txt -mx5
 %ARC_EXE% t %ZIP_FILE%
 
 pause
