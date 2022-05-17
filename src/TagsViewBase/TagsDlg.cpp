@@ -1853,10 +1853,10 @@ void CTagsDlg::SetSortMode(eTagsSortMode sortMode)
                     break;
             }
 
-            UpdateCurrentItem();
-
             m_tvTags.SetRedraw(TRUE);
             m_tvTags.InvalidateRect(TRUE);
+
+            UpdateCurrentItem();
         }
         else
         {
@@ -1881,10 +1881,10 @@ void CTagsDlg::SetSortMode(eTagsSortMode sortMode)
                     break;
             }
 
-            UpdateCurrentItem();
-
             m_lvTags.SetRedraw(TRUE);
             m_lvTags.InvalidateRect(TRUE);
+
+            UpdateCurrentItem();
         }
 
         m_sortMode = sortMode;
