@@ -8,7 +8,7 @@
 #include "win32++/include/wxx_controls.h"
 #include "win32++/include/wxx_gdi.h"
 #include "win32++/include/wxx_criticalsection.h"
-#include <string>
+#include <vector>
 #include <map>
 #include <list>
 #include "EditorWrapper.h"
@@ -141,6 +141,7 @@ class CTagsDlg : public CDialog
             OPT_VIEW_NAMEWIDTH,
             OPT_VIEW_SHOWTOOLTIPS,
             OPT_VIEW_ESCFOCUSTOEDITOR,
+            OPT_VIEW_NESTEDSCOPETREE,
 
             OPT_COLORS_USEEDITORCOLORS,
             //OPT_COLORS_BKGND,
@@ -165,6 +166,12 @@ class CTagsDlg : public CDialog
         typedef CTagsResultParser::tTagData tTagData;
         typedef CTagsResultParser::file_tags file_tags;
         typedef CTagsResultParser::tags_map tags_map;
+
+        struct tTagsByFile
+        {
+            tString filePath;
+            std::vector<tTagData*> fileTags;
+        };
 
         struct tCTagsThreadParam 
         {
@@ -307,6 +314,7 @@ class CTagsDlg : public CDialog
         void sortTagsByLineLV();
         void sortTagsByNameOrTypeLV(eTagsSortMode sortMode);
         void sortTagsTV(eTagsSortMode sortMode);
+        void addFileTagsToTV(tTagsByFile& tagsByFile);
 
         void checkCTagsExePath();
 

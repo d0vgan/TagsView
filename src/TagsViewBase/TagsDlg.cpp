@@ -2389,6 +2389,7 @@ void CTagsDlg::initOptions()
     m_opt.AddInt( OPT_VIEW_NAMEWIDTH,         cszView,  _T("NameWidth"),        220      );
     m_opt.AddBool( OPT_VIEW_SHOWTOOLTIPS,     cszView,  _T("ShowTooltips"),     true     );
     m_opt.AddBool( OPT_VIEW_ESCFOCUSTOEDITOR, cszView,  _T("EscFocusToEditor"), false    );
+    m_opt.AddBool( OPT_VIEW_NESTEDSCOPETREE,  cszView,  _T("NestedScopeTree"),  true     );
 
     // Colors section
     m_opt.AddBool( OPT_COLORS_USEEDITORCOLORS,  cszColors, _T("UseEditorColors"), true );
@@ -2580,12 +2581,6 @@ void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
     if ( !m_tags )
         return;
 
-    struct tTagsByFile
-    {
-        tString filePath;
-        std::vector<tTagData*> fileTags;
-    };
-
     std::list<tTagsByFile> tags;
 
     for ( auto& fileItem : *m_tags )
@@ -2631,6 +2626,14 @@ void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
         }
     }
 
+    for ( tTagsByFile& tagsByFile : tags )
+    {
+        addFileTagsToTV(tagsByFile);
+    }
+}
+
+void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
+{
     auto setNodeItemExpanded = [](CTagsTreeView& tvTags, HTREEITEM hItem)
     {
         TVITEM tvi;
@@ -2644,14 +2647,106 @@ void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
         tvTags.SetItem(tvi);
     };
 
-    for ( tTagsByFile& tagsByFile : tags )
+    // adding a root file item
+    HTREEITEM hFileItem = addTreeViewItem( TVI_ROOT, getFileName(tagsByFile.filePath), nullptr );
+    setNodeItemExpanded(m_tvTags, hFileItem);
+
+    std::map<tString, HTREEITEM> scopeMap;
+
+    if ( m_opt.getBool(OPT_VIEW_NESTEDSCOPETREE) )
     {
-        // adding a root file item
-        HTREEITEM hFileItem = addTreeViewItem( TVI_ROOT, getFileName(tagsByFile.filePath), nullptr );
-        setNodeItemExpanded(m_tvTags, hFileItem);
+        tString scopeSep;
+        tString langFamily = getCtagsLangFamily(tagsByFile.filePath);
+        if ( langFamily.find(_T("C++")) != tString::npos )
+        {
+            scopeSep = _T("::");  // nested scopes in a form of "X::Y::Z"
+        }
+        else
+        {
+            scopeSep = _T(".");  // nested scopes in a form of "X.Y.Z"
+        }
 
-        std::map<tString, HTREEITEM> scopeMap;
+        tString tagScope;
+        tString tagScopeName;
 
+        for ( tTagData* pTag : tagsByFile.fileTags )
+        {
+            HTREEITEM hScopeItem = hFileItem;
+            tString::size_type nScopePos = 0;
+            bool bAddItem = true;
+
+            do
+            {
+                if ( !pTag->tagScope.empty() )
+                {
+                    tString::size_type nScopeEnd = scopeSep.empty() ? tString::npos : pTag->tagScope.find(scopeSep, nScopePos);
+                    tString::size_type nEndPos = (nScopeEnd != tString::npos) ? nScopeEnd : pTag->tagScope.length();
+                    tagScope.assign(pTag->tagScope, 0, nEndPos);
+                    nScopePos = nScopeEnd;
+                    if ( nScopePos != tString::npos )
+                        nScopePos += scopeSep.length();
+                }
+                else
+                {
+                    nScopePos = tString::npos;
+                    tagScope.clear();
+                }
+
+                auto scopeIt = scopeMap.find(!tagScope.empty() ? tagScope : pTag->tagName);
+                if ( scopeIt != scopeMap.end() )
+                {
+                    hScopeItem = scopeIt->second;
+                    if ( tagScope.empty() )
+                        bAddItem = false;
+                }
+                else
+                {
+                    if ( !tagScope.empty() )
+                    {
+                        // adding a scope item
+                        tString::size_type nPos = scopeSep.empty() ? tString::npos : tagScope.rfind(scopeSep);
+                        tagScopeName = (nPos == tString::npos) ? tagScope : tagScope.substr(nPos + scopeSep.length());
+                        hScopeItem = addTreeViewItem(hScopeItem, tagScopeName, nullptr);
+                        scopeMap[tagScope] = hScopeItem;
+
+                        if ( !m_tagFilter.empty() )
+                            setNodeItemExpanded(m_tvTags, hScopeItem);
+                    }
+                }
+            }
+            while ( nScopePos != tString::npos );
+
+            if ( bAddItem )
+            {
+                HTREEITEM hItem = addTreeViewItem(hScopeItem, pTag->tagName, pTag);
+                pTag->data.p = (void *) hItem;
+
+                if ( pTag->tagScope.empty() )
+                {
+                    tagScope = pTag->tagName;
+                }
+                else if ( !scopeSep.empty() )
+                {
+                    tagScope = pTag->tagScope;
+                    tagScope += scopeSep;
+                    tagScope += pTag->tagName;
+                }
+                else
+                {
+                    tagScope.clear();
+                }
+
+                if ( !tagScope.empty() )
+                {
+                    scopeMap[tagScope] = hItem;
+                    if ( !m_tagFilter.empty() )
+                        setNodeItemExpanded(m_tvTags, hItem);
+                }
+            }
+        }
+    }
+    else
+    {
         for ( tTagData* pTag : tagsByFile.fileTags )
         {
             auto scopeIt = scopeMap.find(!pTag->tagScope.empty() ? pTag->tagScope : pTag->tagName);

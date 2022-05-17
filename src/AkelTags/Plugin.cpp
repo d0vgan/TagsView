@@ -940,7 +940,10 @@ LRESULT CALLBACK NewEditProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         }
         case WM_PAINT:
         {
-            thePlugin.GetTagsDlg().ApplyColors();
+            if ( !g_isAkelPadStarting && !g_isClosing )
+            {
+                thePlugin.GetTagsDlg().ApplyColors();
+            }
             break;
         }
         default:
@@ -1148,6 +1151,7 @@ LRESULT CALLBACK NewMainProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 lResult = thePlugin.pMainProcData->NextProc(hWnd, uMsg, wParam, lParam);
 
             g_isAkelPadStarting = false;
+            thePlugin.GetTagsDlg().ApplyColors();
             thePlugin.ewOnFileOpened();
 
             return lResult;
