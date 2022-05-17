@@ -1,7 +1,7 @@
-Universal Ctags 5.9.0(p5.9.20220424.0), Copyright (C) 2015-2022 Universal Ctags Team
+Universal Ctags 5.9.0(p5.9.20220515.0), Copyright (C) 2015-2022 Universal Ctags Team
 Universal Ctags is derived from Exuberant Ctags.
 Exuberant Ctags 5.8, Copyright (C) 1996-2009 Darren Hiebert
-  Compiled: Apr 24 2022, 01:17:04
+  Compiled: May 15 2022, 01:22:51
   URL: https://ctags.io/
   Optional compiled features: +win32, +wildcards, +regex, +gnulib_regex, +internal-sort, +unix-path-separator, +iconv, +option-directory, +xpath, +json, +interactive, +yaml, +case-insensitive-filenames, +packcc, +optscript, +pcre2
 
