@@ -91,7 +91,7 @@ void CEditorWrapper::ewDoParseFile(bool bReparsePhysicalFile)
     }
     else
     {
-        m_pDlg->ClearItems(true);
+        m_pDlg->ParseFile(nullptr, FALSE); // calls ClearItems() and sets m_tags to nullptr
     }
 }
 
