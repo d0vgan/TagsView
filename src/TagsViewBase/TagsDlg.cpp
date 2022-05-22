@@ -54,6 +54,20 @@ namespace
         return (filePathName.c_str() + n);
     }
 
+    LPCTSTR getFileName(const CTagsResultParser::tTagData* pTag)
+    {
+        if ( !pTag->hasFilePath() )
+            return _T("");
+
+        const tString& filePath = *pTag->pFilePath;
+        if ( filePath.length() <= pTag->nFileDirLen )
+            return getFileName(filePath);
+
+        size_t n = pTag->nFileDirLen;
+        if ( filePath[n] == _T('\\') || filePath[n] == _T('/') )  ++n;
+        return (filePath.c_str() + n);
+    }
+
     LPCTSTR getFileExt(LPCTSTR pszFilePathName)
     {
         const TCHAR* pszExt = pszFilePathName + lstrlen(pszFilePathName);
@@ -143,12 +157,12 @@ tString CTagsDlgChild::getTooltip(const CTagsResultParser::tTagData* pTagData)
     s += _T("\ntype: ");
     s += pTagData->tagType;
 
-    if ( pTagData->pFilePath && !pTagData->pFilePath->empty() )
+    if ( pTagData->hasFilePath() )
     {
         TCHAR szNum[20];
 
         s += _T("\nfile: ");
-        s += getFileName(*pTagData->pFilePath);
+        s += getFileName(pTagData);
         s += _T(":");
         ::wsprintf(szNum, _T("%d"), pTagData->line);
         s += szNum;
@@ -2077,7 +2091,7 @@ int CTagsDlg::addListViewItem(int nItem, const tTagData* pTag)
     wsprintf(ts, _T("%d"), pTag->line);
     m_lvTags.SetItemText(nItem, LVC_LINE, ts);
 
-    m_lvTags.SetItemText(nItem, LVC_FILE, pTag->pFilePath ? getFileName(*pTag->pFilePath) : _T(""));
+    m_lvTags.SetItemText(nItem, LVC_FILE, getFileName(pTag));
 
     return nRet;
 }
@@ -2230,7 +2244,7 @@ void CTagsDlg::OnTagDblClicked(const tTagData* pTagData)
 {
     if ( pTagData )
     {
-        if ( pTagData->pFilePath && !pTagData->pFilePath->empty() )
+        if ( pTagData->hasFilePath() )
         {
             const tString& filePath = *pTagData->pFilePath;
             tString currFilePath = m_pEdWr->ewGetFilePathName();
@@ -2256,8 +2270,8 @@ void CTagsDlg::OnTagDblClicked(const tTagData* pTagData)
             UpdateNavigationButtons();
 
             m_pEdWr->ewDoSetFocus();
-            m_isUpdatingSelToItem = false;
         }
+        m_isUpdatingSelToItem = false;
     }
 }
 
@@ -2512,6 +2526,7 @@ void CTagsDlg::sortTagsByLineLV()
             }
             else
             {
+                pTag->pFilePath = nullptr;
                 pTag->data.i = -1;
             }
         }
@@ -2538,6 +2553,7 @@ void CTagsDlg::sortTagsByNameOrTypeLV(eTagsSortMode sortMode)
             }
             else
             {
+                pTag->pFilePath = nullptr;
                 pTag->data.i = -1;
             }
         }
@@ -2602,6 +2618,7 @@ void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
             }
             else
             {
+                pTag->pFilePath = nullptr;
                 pTag->data.p = nullptr;
             }
         }
@@ -2651,7 +2668,7 @@ void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
     };
 
     // adding a root file item
-    HTREEITEM hFileItem = addTreeViewItem( TVI_ROOT, getFileName(tagsByFile.filePath), nullptr );
+    HTREEITEM hFileItem = addTreeViewItem( TVI_ROOT, getFileName(tagsByFile.fileTags.front()), nullptr );
     setNodeItemExpanded(m_tvTags, hFileItem);
 
     std::map<tString, HTREEITEM> scopeMap;

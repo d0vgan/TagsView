@@ -43,6 +43,7 @@ class CTagsResultParser
             int      line;
             int      end_line;
             const t_string* pFilePath;
+            size_t nFileDirLen;
             union uData {
                 void* p;
                 int   i;
@@ -50,8 +51,8 @@ class CTagsResultParser
 
             tTagData(const t_string& tagName_, const t_string& tagPattern_, const t_string& tagType_,
                      const t_string& tagScope_, int line_, int end_line_)
-              : tagName(tagName_), tagPattern(tagPattern_), tagType(tagType_),
-                tagScope(tagScope_), line(line_), end_line(end_line_), pFilePath(nullptr)
+              : tagName(tagName_), tagPattern(tagPattern_), tagType(tagType_), tagScope(tagScope_),
+                line(line_), end_line(end_line_), pFilePath(nullptr), nFileDirLen(0)
             {
                 data.p = nullptr;
             }
@@ -69,6 +70,10 @@ class CTagsResultParser
                 return s;
             }
 
+            bool hasFilePath() const
+            {
+                return (pFilePath && !pFilePath->empty());
+            }
         };
 
         typedef std::vector<std::unique_ptr<tTagData>> file_tags; // tags within a file
