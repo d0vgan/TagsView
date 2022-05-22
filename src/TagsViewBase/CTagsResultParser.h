@@ -40,18 +40,18 @@ class CTagsResultParser
             t_string tagPattern;
             t_string tagType;
             t_string tagScope;
-            t_string filePath;
             int      line;
             int      end_line;
+            const t_string* pFilePath;
             union uData {
                 void* p;
                 int   i;
             } data;
 
             tTagData(const t_string& tagName_, const t_string& tagPattern_, const t_string& tagType_,
-                     const t_string& tagScope_, const t_string& filePath_, int line_, int end_line_)
+                     const t_string& tagScope_, int line_, int end_line_)
               : tagName(tagName_), tagPattern(tagPattern_), tagType(tagType_),
-                tagScope(tagScope_), filePath(filePath_), line(line_), end_line(end_line_)
+                tagScope(tagScope_), line(line_), end_line(end_line_), pFilePath(nullptr)
             {
                 data.p = nullptr;
             }

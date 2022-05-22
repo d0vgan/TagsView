@@ -143,12 +143,12 @@ tString CTagsDlgChild::getTooltip(const CTagsResultParser::tTagData* pTagData)
     s += _T("\ntype: ");
     s += pTagData->tagType;
 
-    if ( !pTagData->filePath.empty() )
+    if ( pTagData->pFilePath && !pTagData->pFilePath->empty() )
     {
         TCHAR szNum[20];
 
         s += _T("\nfile: ");
-        s += getFileName(pTagData->filePath);
+        s += getFileName(*pTagData->pFilePath);
         s += _T(":");
         ::wsprintf(szNum, _T("%d"), pTagData->line);
         s += szNum;
@@ -2077,7 +2077,7 @@ int CTagsDlg::addListViewItem(int nItem, const tTagData* pTag)
     wsprintf(ts, _T("%d"), pTag->line);
     m_lvTags.SetItemText(nItem, LVC_LINE, ts);
 
-    m_lvTags.SetItemText(nItem, LVC_FILE, getFileName(pTag->filePath));
+    m_lvTags.SetItemText(nItem, LVC_FILE, pTag->pFilePath ? getFileName(*pTag->pFilePath) : _T(""));
 
     return nRet;
 }
@@ -2230,9 +2230,9 @@ void CTagsDlg::OnTagDblClicked(const tTagData* pTagData)
 {
     if ( pTagData )
     {
-        if ( !pTagData->filePath.empty() )
+        if ( pTagData->pFilePath && !pTagData->pFilePath->empty() )
         {
-            const tString& filePath = pTagData->filePath;
+            const tString& filePath = *pTagData->pFilePath;
             tString currFilePath = m_pEdWr->ewGetFilePathName();
             if ( lstrcmpi(filePath.c_str(), currFilePath.c_str()) != 0 )
             {
@@ -2507,6 +2507,7 @@ void CTagsDlg::sortTagsByLineLV()
         {
             if ( m_tagFilter.empty() || isTagMatchFilter(pTag->getFullTagName()) )
             {
+                pTag->pFilePath = &fileItem.first;
                 pTag->data.i = addListViewItem(nItem++, pTag.get());
             }
             else
@@ -2532,6 +2533,7 @@ void CTagsDlg::sortTagsByNameOrTypeLV(eTagsSortMode sortMode)
         {
             if ( m_tagFilter.empty() || isTagMatchFilter(pTag->getFullTagName()) )
             {
+                pTag->pFilePath = &fileItem.first;
                 tags.push_back(pTag.get());
             }
             else
@@ -2595,6 +2597,7 @@ void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
         {
             if ( m_tagFilter.empty() || isTagMatchFilter(pTag->getFullTagName()) )
             {
+                pTag->pFilePath = &fileItem.first;
                 tagsByFile.fileTags.push_back(pTag.get());
             }
             else

@@ -39,12 +39,12 @@ namespace
     {
         switch ( ch )
         {
+            case ' ':   // 0x20, space
             case '\t':  // 0x09, tabulation
             case '\n':  // 0x0A, line feed
             case '\v':  // 0x0B, line tabulation
             case '\f':  // 0x0C, form feed
             case '\r':  // 0x0D, carriage return
-            case ' ':   // 0x20, space
                 return true;
         }
         return false;
@@ -137,6 +137,7 @@ void CTagsResultParser::Parse(const char* s, unsigned int nParseFlags, tParseCon
     tTagData* pTag;
     tTagDataInternal tagData;
     std::vector<TCHAR> buf;
+    t_string filePath;
     tags_map::iterator itrFileTags;
 
     buf.reserve(200);
@@ -293,15 +294,15 @@ void CTagsResultParser::Parse(const char* s, unsigned int nParseFlags, tParseCon
                     to_tstring(tagData.tagPattern, nParseFlags, buf),
                     to_tstring(tagData.tagType, nParseFlags, buf),
                     to_tstring(tagData.tagScope, nParseFlags, buf),
-                    context.inputFileOverride.empty() ? to_tstring(tagData.filePath, nParseFlags, buf) : context.inputFileOverride,
                     tagData.line,
                     tagData.end_line
                 );
 
-                itrFileTags = m.find(pTag->filePath);
+                filePath = context.inputFileOverride.empty() ? to_tstring(tagData.filePath, nParseFlags, buf) : context.inputFileOverride;
+                itrFileTags = m.find(filePath);
                 if ( itrFileTags == m.end() )
                 {
-                    itrFileTags = m.insert( std::make_pair(pTag->filePath, file_tags()) ).first;
+                    itrFileTags = m.insert( std::make_pair(filePath, file_tags()) ).first;
                     itrFileTags->second.reserve(256);
                 }
                 itrFileTags->second.push_back(std::unique_ptr<tTagData>(pTag));
