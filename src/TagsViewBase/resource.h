@@ -32,6 +32,7 @@
 #define IDC_CH_OPT_CTAGSSTDOUT                  2021
 #define IDC_CH_OPT_SCANFOLDER                   2031
 #define IDC_CH_OPT_SCANFOLDERRECURSIVELY        2032
+#define IDR_TAGSVIEW_MENU                       3001
 #define IDM_PREVPOS                             40000
 #define IDM_NEXTPOS                             40001
 #define IDM_SORTLINE                            40002
@@ -40,5 +41,15 @@
 #define IDM_VIEWTREE                            40005
 #define IDM_PARSE                               40006
 #define IDM_CLOSE                               40007
+#define IDM_TREE_COPYITEMTOCLIPBOARD            40101
+#define IDM_TREE_COPYITEMANDCHILDRENTOCLIPBOARD 40102
+#define IDM_TREE_COPYALLITEMSTOCLIPBOARD        40103
+#define IDM_TREE_EXPANDCHILDNODES               40111
+#define IDM_TREE_COLLAPSECHILDNODES             40112
+#define IDM_TREE_EXPANDALLNODES                 40113
+#define IDM_TREE_COLLAPSEALLNODES               40114
+#define IDM_LIST_COPYITEMTOCLIPBOARD            40201
+#define IDM_LIST_COPYALLITEMSTOCLIPBOARD        40202
+#define IDM_SETTINGS                            40301
 
 #endif // _TAGSVIEW_RESOURCE_H_FILE_

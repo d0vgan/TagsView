@@ -269,18 +269,21 @@ class CTagsDlg : public CDialog
 
         COptionsManager& GetOptions() { return m_opt; }
 
-        void SetInstDll(HINSTANCE hInstDll)
-        {
-            m_hInstDll = hInstDll;
-        }
-
-        HINSTANCE GetInstDll() { return m_hInstDll; }
-
         void ApplyColors();
         void ClearItems(bool bDelayedRedraw = false);
         void ClearCachedTags();
         void PurifyCachedTags();
 
+        void OnTreeCopyItemToClipboard();
+        void OnTreeCopyItemAndChildrenToClipboard();
+        void OnTreeCopyAllItemsToClipboard();
+        void OnTreeExpandChildNodes();
+        void OnTreeCollapseChildNodes();
+        void OnTreeExpandAllNodes();
+        void OnTreeCollapseAllNodes();
+        void OnListCopyItemToClipboard();
+        void OnListCopyAllItemsToClipboard();
+        void OnShowSettings();
         void OnSettingsChanged();
         void OnTagDblClicked(const tTagData* pTagData);
 
@@ -315,6 +318,11 @@ class CTagsDlg : public CDialog
         void sortTagsByNameOrTypeLV(eTagsSortMode sortMode);
         void sortTagsTV(eTagsSortMode sortMode);
         void addFileTagsToTV(tTagsByFile& tagsByFile);
+        tString getItemTextLV(int iItem) const;
+        tString getAllItemsTextLV() const;
+        tString getItemTextTV(HTREEITEM hItem) const;
+        tString getItemAndChildrenTextTV(HTREEITEM hItem, const tString& indent = tString()) const;
+        tString getAllItemsTextTV() const;
 
         void checkCTagsExePath();
 
@@ -353,7 +361,7 @@ class CTagsDlg : public CDialog
         COptionsManager m_opt;
         COptionsReaderWriter* m_optRdWr;
         CEditorWrapper* m_pEdWr;
-        HINSTANCE       m_hInstDll;
+        HMENU           m_hMenu;
         COLORREF        m_crTextColor;
         COLORREF        m_crBkgndColor;
         HBRUSH          m_hBkgndBrush;

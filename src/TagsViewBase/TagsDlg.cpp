@@ -1,4 +1,5 @@
 #include "TagsDlg.h"
+#include "SettingsDlg.h"
 #include "ConsoleOutputRedirector.h"
 #include "resource.h"
 #include "win32++/include/wxx_textconv.h"
@@ -140,6 +141,38 @@ namespace
 
         return true;
     }
+
+    bool setClipboardText(const tString& text, HWND hWndOwner)
+    {
+        bool bSucceeded = false;
+
+        if ( ::OpenClipboard(hWndOwner) )
+        {
+            HGLOBAL hTextMem = ::GlobalAlloc( GMEM_MOVEABLE, (text.length() + 1)*sizeof(TCHAR) );
+            if ( hTextMem != NULL )
+            {
+                LPTSTR pszText = (LPTSTR) ::GlobalLock(hTextMem);
+                if ( pszText != NULL )
+                {
+                    lstrcpy(pszText, text.c_str());
+                    ::GlobalUnlock(hTextMem);
+
+                    ::EmptyClipboard();
+
+#ifdef UNICODE
+                    const UINT uClipboardFormat = CF_UNICODETEXT;
+#else
+                    const UINT uClipboardFormat = CF_TEXT;
+#endif
+                    if ( ::SetClipboardData(uClipboardFormat, hTextMem) != NULL )
+                        bSucceeded = true;
+                }
+            }
+            ::CloseClipboard();
+        }
+
+        return bSucceeded;
+    }
 }
 
 
@@ -163,7 +196,7 @@ tString CTagsDlgChild::getTooltip(const CTagsResultParser::tTagData* pTagData)
 
         s += _T("\nfile: ");
         s += getFileName(pTagData);
-        s += _T(":");
+        s += _T(':');
         ::wsprintf(szNum, _T("%d"), pTagData->line);
         s += szNum;
     }
@@ -245,10 +278,10 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             if ( m_pDlg->m_pEdWr )
             {
-                int iItem = m_pDlg->m_lvTags.GetSelectionMark();
+                int iItem = this->GetSelectionMark();
                 if ( iItem >= 0 )
                 {
-                    int state = m_pDlg->m_lvTags.GetItemState(iItem, LVIS_FOCUSED | LVIS_SELECTED);
+                    int state = this->GetItemState(iItem, LVIS_FOCUSED | LVIS_SELECTED);
                     if ( state & (LVIS_FOCUSED | LVIS_SELECTED) )
                     {
                         LVITEM lvi;
@@ -262,10 +295,10 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                         lvi.pszText = szItemText;
                         lvi.cchTextMax = sizeof(szItemText)/sizeof(szItemText[0]) - 1;
 
-                        m_pDlg->m_lvTags.GetItem(lvi);
+                        this->GetItem(lvi);
 
-                        m_pDlg->m_lvTags.SetItemState(iItem, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
-                        m_pDlg->m_lvTags.SetSelectionMark(iItem);
+                        this->SetItemState(iItem, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
+                        this->SetSelectionMark(iItem);
 
                         const CTagsDlg::tTagData* pTagData = (const CTagsDlg::tTagData *) lvi.lParam;
                         if ( pTagData )
@@ -339,10 +372,10 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         else if ( uMsg == WM_SETFOCUS )
         {
             bool isSelected = false;
-            int iItem = m_pDlg->m_lvTags.GetSelectionMark();
+            int iItem = this->GetSelectionMark();
             if ( iItem >= 0 )
             {
-                int state = m_pDlg->m_lvTags.GetItemState(iItem, LVIS_FOCUSED | LVIS_SELECTED);
+                int state = this->GetItemState(iItem, LVIS_FOCUSED | LVIS_SELECTED);
                 if ( state & (LVIS_FOCUSED | LVIS_SELECTED) )
                 {
                     isSelected = true;
@@ -350,12 +383,27 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             }
             if ( !isSelected )
             {
-                if ( m_pDlg->m_lvTags.GetItemCount() > 0 )
+                if ( this->GetItemCount() > 0 )
                 {
-                    m_pDlg->m_lvTags.SetItemState(0, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
-                    m_pDlg->m_lvTags.SetSelectionMark(0);
+                    this->SetItemState(0, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
+                    this->SetSelectionMark(0);
                 }
             }
+        }
+        else if ( uMsg == WM_RBUTTONDOWN )
+        {
+            HMENU hPopupMenu = ::GetSubMenu(m_pDlg->m_hMenu, 2);
+            if ( hPopupMenu )
+            {
+                POINT pt = { 0, 0 };
+                ::GetCursorPos(&pt);
+                ::TrackPopupMenuEx(hPopupMenu, 0, pt.x, pt.y, m_pDlg->GetHwnd(), NULL);
+            }
+            return 0;
+        }
+        else if (uMsg == WM_RBUTTONUP)
+        {
+            return 0;
         }
     }
 
@@ -372,7 +420,7 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             if ( m_pDlg->m_pEdWr )
             {
-                HTREEITEM hItem = m_pDlg->m_tvTags.GetSelection();
+                HTREEITEM hItem = this->GetSelection();
                 if ( hItem )
                 {
                     TVITEM tvi;
@@ -386,7 +434,7 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                     tvi.pszText = szItemText;
                     tvi.cchTextMax = sizeof(szItemText)/sizeof(szItemText[0]) - 1;
 
-                    m_pDlg->m_tvTags.GetItem(tvi);
+                    this->GetItem(tvi);
 
                     const CTagsDlg::tTagData* pTagData = (const CTagsDlg::tTagData *) tvi.lParam;
                     if ( pTagData )
@@ -489,6 +537,28 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             }
             */
         }
+        else if ( uMsg == WM_RBUTTONDOWN )
+        {
+            BOOL bItemHasChildren = FALSE;
+            HTREEITEM hItem = this->GetSelection();
+            if ( hItem )
+            {
+                bItemHasChildren = this->ItemHasChildren(hItem);
+            }
+
+            HMENU hPopupMenu = ::GetSubMenu(m_pDlg->m_hMenu, bItemHasChildren ? 1 : 0);
+            if ( hPopupMenu )
+            {
+                POINT pt = { 0, 0 };
+                ::GetCursorPos(&pt);
+                ::TrackPopupMenuEx(hPopupMenu, 0, pt.x, pt.y, m_pDlg->GetHwnd(), NULL);
+            }
+            return 0;
+        }
+        else if (uMsg == WM_RBUTTONUP)
+        {
+            return 0;
+        }
     }
 
     return WndProcDefault(uMsg, wParam, lParam);
@@ -516,13 +586,13 @@ CTagsDlg::CTagsDlg() : CDialog(IDD_MAIN)
 , m_tags(nullptr)
 , m_optRdWr(NULL)
 , m_pEdWr(NULL)
-, m_prevSelStart(-1)
-, m_isUpdatingSelToItem(false)
-, m_nTagsThreadCount(0)
-, m_hInstDll(NULL)
+, m_hMenu(NULL)
 , m_crTextColor(0xFFFFFFFF)
 , m_crBkgndColor(0xFFFFFFFF)
 , m_hBkgndBrush(NULL)
+, m_prevSelStart(-1)
+, m_isUpdatingSelToItem(false)
+, m_nTagsThreadCount(0)
 {
     SetCTagsExePath();
     m_hTagsThreadEvent = ::CreateEvent(NULL, TRUE, TRUE, NULL);
@@ -544,6 +614,10 @@ CTagsDlg::~CTagsDlg()
     if ( m_hBkgndBrush != NULL )
     {
         ::DeleteObject(m_hBkgndBrush);
+    }
+    if ( m_hMenu != NULL )
+    {
+        ::DestroyMenu(m_hMenu);
     }
 
     if ( m_opt.getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
@@ -798,6 +872,46 @@ BOOL CTagsDlg::OnCommand(WPARAM wParam, LPARAM lParam)
         case IDM_CLOSE:
             this->PostMessage(WM_CLOSETAGSVIEW);
             break;
+
+        case IDM_TREE_COPYITEMTOCLIPBOARD:
+            OnTreeCopyItemToClipboard();
+            break;
+
+        case IDM_TREE_COPYITEMANDCHILDRENTOCLIPBOARD:
+            OnTreeCopyItemAndChildrenToClipboard();
+            break;
+
+        case IDM_TREE_COPYALLITEMSTOCLIPBOARD:
+            OnTreeCopyAllItemsToClipboard();
+            break;
+
+        case IDM_TREE_EXPANDCHILDNODES:
+            OnTreeExpandChildNodes();
+            break;
+
+        case IDM_TREE_COLLAPSECHILDNODES:
+            OnTreeCollapseChildNodes();
+            break;
+
+        case IDM_TREE_EXPANDALLNODES:
+            OnTreeExpandAllNodes();
+            break;
+
+        case IDM_TREE_COLLAPSEALLNODES:
+            OnTreeCollapseAllNodes();
+            break;
+
+        case IDM_LIST_COPYITEMTOCLIPBOARD:
+            OnListCopyItemToClipboard();
+            break;
+
+        case IDM_LIST_COPYALLITEMSTOCLIPBOARD:
+            OnListCopyAllItemsToClipboard();
+            break;
+
+        case IDM_SETTINGS:
+            OnShowSettings();
+            break;
     }
 
     return FALSE;
@@ -953,6 +1067,8 @@ BOOL CTagsDlg::OnInitDialog()
     OnSize(true);
 
     checkCTagsExePath();
+
+    m_hMenu = ::LoadMenu( GetApp()->GetResourceHandle(), MAKEINTRESOURCE(IDR_TAGSVIEW_MENU) );
 
     return TRUE;
 }
@@ -1743,7 +1859,7 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
     //
     tt->cmd_line.clear();
     tt->cmd_line.reserve(512);
-    tt->cmd_line += _T("\"");
+    tt->cmd_line += _T('\"');
     tt->cmd_line += m_ctagsExeFilePath;
     if ( !ctagsOptPath.empty() )
     {
@@ -1753,22 +1869,22 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
     tt->cmd_line += _T("\" -f ");
     if ( tt->temp_output_file.empty() )
     {
-        tt->cmd_line += _T("-");
+        tt->cmd_line += _T('-');
     }
     else
     {
-        tt->cmd_line += _T("\"");
+        tt->cmd_line += _T('\"');
         tt->cmd_line += tt->temp_output_file;
-        tt->cmd_line += _T("\"");
+        tt->cmd_line += _T('\"');
     }
     tt->cmd_line += _T(" --fields=fKnste ");
     if ( tt->temp_input_file.empty() )
     {
         if ( !m_opt.getBool(OPT_CTAGS_SCANFOLDER) )
         {
-            tt->cmd_line += _T("\"");
+            tt->cmd_line += _T('\"');
             tt->cmd_line += tt->source_file_name;
-            tt->cmd_line += _T("\"");
+            tt->cmd_line += _T('\"');
 
             std::list<tString> relatedFiles = getRelatedSourceFiles(tt->source_file_name);
             if ( !relatedFiles.empty() )
@@ -1777,7 +1893,7 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
                 {
                     tt->cmd_line += _T(" \"");
                     tt->cmd_line += relatedFile;
-                    tt->cmd_line += _T("\"");
+                    tt->cmd_line += _T('\"');
                 }
             }
         }
@@ -1802,16 +1918,16 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
             tString source_dir(tt->source_file_name.c_str(), n + 2); // ends with "\X" or "/X"
             source_dir.back() = _T('*'); // now ends with "\*" or "/*"
 
-            tt->cmd_line += _T("\"");
+            tt->cmd_line += _T('\"');
             tt->cmd_line += source_dir;
-            tt->cmd_line += _T("\"");
+            tt->cmd_line += _T('\"');
         }
     }
     else
     {
-        tt->cmd_line += _T("\"");
+        tt->cmd_line += _T('\"');
         tt->cmd_line += tt->temp_input_file;
-        tt->cmd_line += _T("\"");
+        tt->cmd_line += _T('\"');
     }
 
     ::ResetEvent(m_hTagsThreadEvent);
@@ -2214,6 +2330,62 @@ void CTagsDlg::PurifyCachedTags()
     {
         ClearItems(true);
     }
+}
+
+void CTagsDlg::OnTreeCopyItemToClipboard()
+{
+    HTREEITEM hItem = m_tvTags.GetSelection();
+    setClipboardText( getItemTextTV(hItem), m_pEdWr->ewGetMainHwnd() );
+}
+
+void CTagsDlg::OnTreeCopyItemAndChildrenToClipboard()
+{
+    HTREEITEM hItem = m_tvTags.GetSelection();
+    setClipboardText( getItemAndChildrenTextTV(hItem), m_pEdWr->ewGetMainHwnd() );
+}
+
+void CTagsDlg::OnTreeCopyAllItemsToClipboard()
+{
+    setClipboardText( getAllItemsTextTV(), m_pEdWr->ewGetMainHwnd() );
+}
+
+void CTagsDlg::OnTreeExpandChildNodes()
+{
+
+}
+
+void CTagsDlg::OnTreeCollapseChildNodes()
+{
+
+}
+
+void CTagsDlg::OnTreeExpandAllNodes()
+{
+
+}
+
+void CTagsDlg::OnTreeCollapseAllNodes()
+{
+
+}
+
+void CTagsDlg::OnListCopyItemToClipboard()
+{
+    int iItem = m_lvTags.GetSelectionMark();
+    setClipboardText( getItemTextLV(iItem), m_pEdWr->ewGetMainHwnd() );
+}
+
+void CTagsDlg::OnListCopyAllItemsToClipboard()
+{
+    setClipboardText( getAllItemsTextLV(), m_pEdWr->ewGetMainHwnd() );
+}
+
+void CTagsDlg::OnShowSettings()
+{
+    CSettingsDlg dlg(GetOptions());
+    dlg.DoModal(m_pEdWr->ewGetMainHwnd());
+
+    OnSettingsChanged();
 }
 
 void CTagsDlg::OnSettingsChanged()
@@ -2808,4 +2980,114 @@ void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
             }
         }
     }
+}
+
+tString CTagsDlg::getItemTextLV(int iItem) const
+{
+    if ( iItem >= 0 )
+    {
+        const tTagData* pTag = (const tTagData *) m_lvTags.GetItemData(iItem);
+        if ( pTag )
+        {
+            TCHAR szNum[32];
+            tString S;
+
+            ::wsprintf(szNum, _T("\t%d\t"), pTag->line);
+
+            S.reserve(256);
+            S += pTag->getFullTagName();
+            S += _T('\t');
+            S += pTag->tagType;
+            S += szNum;
+            S += getFileName(pTag);
+            return S;
+        }
+    }
+    return tString();
+}
+
+tString CTagsDlg::getAllItemsTextLV() const
+{
+    int nItems = m_lvTags.GetItemCount();
+    if ( nItems > 0 )
+    {
+        tString S;
+
+        S.reserve(96*nItems);
+        for ( int i = 0; i < nItems; ++i )
+        {
+            S += getItemTextLV(i);
+            S += _T('\n');
+        }
+        return S;
+    }
+    return tString();
+}
+
+tString CTagsDlg::getItemTextTV(HTREEITEM hItem) const
+{
+    if ( hItem )
+    {
+        return m_tvTags.GetItemText(hItem).GetString();
+    }
+    return tString();
+}
+
+tString CTagsDlg::getItemAndChildrenTextTV(HTREEITEM hItem, const tString& indent ) const
+{
+    if ( hItem )
+    {
+        tString S;
+
+        HTREEITEM hChildItem = m_tvTags.GetChild(hItem);
+        if ( hChildItem != NULL )
+        {
+            S.reserve(1024);
+            S += indent;
+            S += getItemTextTV(hItem);
+            S += _T('\n');
+            do
+            {
+                S += getItemAndChildrenTextTV(hChildItem, indent + _T("  "));
+                if ( !S.empty() && S.back() != _T('\n') )
+                {
+                    S += _T('\n');
+                }
+                hChildItem = m_tvTags.GetNextSibling(hChildItem);
+            }
+            while ( hChildItem != NULL );
+        }
+        else
+        {
+            S.reserve( 96 );
+            S += indent;
+            S += getItemTextTV(hItem);
+        }
+        return S;
+    }
+    return tString();
+}
+
+tString CTagsDlg::getAllItemsTextTV() const
+{
+    HTREEITEM hItem = m_tvTags.GetRootItem();
+    if ( hItem )
+    {
+        tString S;
+
+        S.reserve(32*m_tvTags.GetCount());
+        do
+        {
+            S += getItemAndChildrenTextTV(hItem);
+            if ( !S.empty() && S.back() != _T('\n') )
+            {
+                S += _T('\n');
+            }
+            hItem = m_tvTags.GetNextSibling(hItem);
+        }
+        while ( hItem != NULL );
+
+        return S;
+    }
+    return tString();
 }

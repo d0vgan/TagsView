@@ -1,6 +1,5 @@
 #include "Plugin.h"
 #include "../TagsViewBase/c_base/HexStr.h"
-#include "../TagsViewBase/SettingsDlg.h"
 
 
 // consts
@@ -812,7 +811,6 @@ extern "C" void __declspec(dllexport) TagsView(PLUGINDATA *pd)
         thePlugin.Initialize(pd);
         if ( !thePlugin.bTagsDlgVisible )
         {
-            thePlugin.GetTagsDlg().SetInstDll(pd->hInstanceDLL);
             if ( !thePlugin.GetTagsDlg().GetHwnd() )
             {
                 thePlugin.GetTagsDlg().DoModeless(thePlugin.ewGetMainHwnd()); // create modeless dialog
@@ -872,10 +870,7 @@ extern "C" void __declspec(dllexport) Settings(PLUGINDATA *pd)
         g_isMainWindowShown = true;
     }
 
-    CSettingsDlg dlg(thePlugin.GetTagsDlg().GetOptions());
-    dlg.DoModal(thePlugin.ewGetMainHwnd());
-
-    thePlugin.GetTagsDlg().OnSettingsChanged();
+    thePlugin.GetTagsDlg().OnShowSettings();
 
     // Stay in memory, and show as active
     pd->nUnload = UD_NONUNLOAD_NONACTIVE;

@@ -1,6 +1,5 @@
 #include "Plugin.h"
 #include "../TagsViewBase/resource.h"
-#include "../TagsViewBase/SettingsDlg.h"
 
 // CTagsViewPlugin class
 //----------------------------------------------------------------------------
@@ -433,10 +432,7 @@ void funcSettings()
 {
     thePlugin.InitOptions();
 
-    CSettingsDlg dlg(thePlugin.GetTagsDlg().GetOptions());
-    dlg.DoModal(thePlugin.ewGetMainHwnd());
-
-    thePlugin.GetTagsDlg().OnSettingsChanged();
+    thePlugin.GetTagsDlg().OnShowSettings();
 }
 
 // static func
