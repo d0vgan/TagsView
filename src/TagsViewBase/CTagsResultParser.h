@@ -8,21 +8,11 @@
 #include <wchar.h>
 #include <tchar.h>
 #include <Windows.h>
+#include "TagsCommon.h"
 
 class CTagsResultParser
 {
-    public:
-        typedef std::basic_string<TCHAR> t_string;
-
-        class string_cmp_less
-        {
-            public:
-                bool operator() (const t_string& s1, const t_string& s2) const
-                {
-                    return (lstrcmpi(s1.c_str(), s2.c_str()) < 0);
-                }
-        };
-
+    protected:
         struct tTagDataInternal
         {
             std::string tagName;
@@ -34,48 +24,10 @@ class CTagsResultParser
             int         end_line;
         };
 
-        struct tTagData
-        {
-            t_string tagName;
-            t_string tagPattern;
-            t_string tagType;
-            t_string tagScope;
-            int      line;
-            int      end_line;
-            const t_string* pFilePath;
-            size_t nFileDirLen;
-            union uData {
-                void* p;
-                int   i;
-            } data;
-
-            tTagData(const t_string& tagName_, const t_string& tagPattern_, const t_string& tagType_,
-                     const t_string& tagScope_, int line_, int end_line_)
-              : tagName(tagName_), tagPattern(tagPattern_), tagType(tagType_), tagScope(tagScope_),
-                line(line_), end_line(end_line_), pFilePath(nullptr), nFileDirLen(0)
-            {
-                data.p = nullptr;
-            }
-
-            t_string getFullTagName() const
-            {
-                if ( tagScope.empty() )
-                    return tagName;
-
-                t_string s;
-                s.reserve(tagScope.length() + tagName.length() + 2);
-                s += tagScope;
-                s += _T("::");
-                s += tagName;
-                return s;
-            }
-
-            bool hasFilePath() const
-            {
-                return (pFilePath && !pFilePath->empty());
-            }
-        };
-
+    public:
+        typedef TagsCommon::t_string t_string;
+        typedef TagsCommon::tTagData tTagData;
+        typedef TagsCommon::string_cmp_less string_cmp_less;
         typedef std::vector<std::unique_ptr<tTagData>> file_tags; // tags within a file
         typedef std::map<t_string, file_tags, string_cmp_less> tags_map; // tags in multiple files
 

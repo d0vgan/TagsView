@@ -33,10 +33,25 @@
     <ClCompile Include="src\AkelTags\Plugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\TagsViewBase\SettingsDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TagsViewBase\TagsCommon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\TagsViewBase\TagsDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\TagsViewBase\SettingsDlg.cpp">
+    <ClCompile Include="src\TagsViewBase\TagsDlgChild.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TagsViewBase\TagsFilterEdit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TagsViewBase\TagsListView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TagsViewBase\TagsTreeView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -68,10 +83,25 @@
     <ClInclude Include="src\TagsViewBase\resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\TagsViewBase\SettingsDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\TagsViewBase\TagsCommon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="src\TagsViewBase\TagsDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\TagsViewBase\SettingsDlg.h">
+    <ClInclude Include="src\TagsViewBase\TagsDlgChild.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\TagsViewBase\TagsFilterEdit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\TagsViewBase\TagsListView.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\TagsViewBase\TagsTreeView.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

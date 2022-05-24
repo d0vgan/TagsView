@@ -2,8 +2,6 @@
 #define _TAGS_DLG_H_
 //---------------------------------------------------------------------------
 #include "win32++/include/wxx_dialog.h"
-#include "win32++/include/wxx_listview.h"
-#include "win32++/include/wxx_treeview.h"
 #include "win32++/include/wxx_toolbar.h"
 #include "win32++/include/wxx_controls.h"
 #include "win32++/include/wxx_gdi.h"
@@ -11,78 +9,20 @@
 #include <vector>
 #include <map>
 #include <list>
-#include "EditorWrapper.h"
 #include "OptionsManager.h"
+#include "TagsCommon.h"
 #include "CTagsResultParser.h"
+#include "TagsFilterEdit.h"
+#include "TagsListView.h"
+#include "TagsTreeView.h"
 
 using Win32xx::CDialog;
-using Win32xx::CListView;
-using Win32xx::CTreeView;
 using Win32xx::CToolBar;
 using Win32xx::CToolTip;
 using Win32xx::CBrush;
 using Win32xx::CCriticalSection;
-using Win32xx::tString;
 
 class CEditorWrapper;
-class CTagsDlg;
-
-class CTagsDlgChild
-{
-    public:
-        CTagsDlgChild() : m_pDlg(NULL) { }
-        void SetTagsDlg(CTagsDlg* pDlg) { m_pDlg = pDlg; }
-
-    protected:
-        static tString getTooltip(const CTagsResultParser::tTagData* pTagData);
-
-    protected:
-        CTagsDlg* m_pDlg;
-};
-
-class CTagsFilterEdit : public CWnd, public CTagsDlgChild
-{
-    public:
-        LRESULT DirectMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
-        {
-            return WndProc(uMsg, wParam, lParam);
-        }
-
-    protected:
-        virtual LRESULT WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
-};
-
-class CTagsListView : public CListView, public CTagsDlgChild
-{
-    public:
-        LRESULT DirectMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
-        {
-            return WndProc(uMsg, wParam, lParam);
-        }
-
-    protected:
-        virtual LRESULT WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
-
-    protected:
-        CPoint  m_lastPoint;
-        tString m_lastTooltipText;
-};
-
-class CTagsTreeView : public CTreeView, public CTagsDlgChild
-{
-    public:
-        LRESULT DirectMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
-        {
-            return WndProc(uMsg, wParam, lParam);
-        }
-
-    protected:
-        virtual LRESULT WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
-
-    protected:
-        CPoint  m_lastPoint;
-        tString m_lastTooltipText;
-};
 
 class CTagsDlg : public CDialog
 {
@@ -163,13 +103,14 @@ class CTagsDlg : public CDialog
             OPT_COUNT
         };
 
-        typedef CTagsResultParser::tTagData tTagData;
+        typedef TagsCommon::t_string t_string;
+        typedef TagsCommon::tTagData tTagData;
         typedef CTagsResultParser::file_tags file_tags;
         typedef CTagsResultParser::tags_map tags_map;
 
         struct tTagsByFile
         {
-            tString filePath;
+            t_string filePath;
             std::vector<tTagData*> fileTags;
         };
 
@@ -178,10 +119,10 @@ class CTagsDlg : public CDialog
             CTagsDlg* pDlg { nullptr };
             DWORD     dwThreadID { 0 };
             bool      isUTF8{ false };
-            tString   cmd_line;
-            tString   source_file_name;
-            tString   temp_input_file;
-            tString   temp_output_file;
+            t_string  cmd_line;
+            t_string  source_file_name;
+            t_string  temp_input_file;
+            t_string  temp_output_file;
         };
 
         static const TCHAR* cszListViewColumnNames[LVC_TOTAL];
@@ -190,11 +131,11 @@ class CTagsDlg : public CDialog
         CTagsDlg();
         virtual ~CTagsDlg();
 
-        static void DeleteTempFile(const tString& filePath);
+        static void DeleteTempFile(const t_string& filePath);
 
         const eTagsSortMode GetSortMode() const { return m_sortMode; }
         const eTagsViewMode GetViewMode() const { return m_viewMode; }
-        bool  GoToTag(const tString& filePath, const TCHAR* cszTagName); // not implemented yet
+        bool  GoToTag(const t_string& filePath, const TCHAR* cszTagName); // not implemented yet
         void  ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFile);
         void  ReparseCurrentFile();
         void  SetSortMode(eTagsSortMode sortMode);
@@ -222,7 +163,7 @@ class CTagsDlg : public CDialog
         void  SetEditorWrapper(CEditorWrapper* pEdWr) { m_pEdWr = pEdWr; }
 
         // MUST be called manually to set required path to ctags.exe
-        void  SetCTagsExePath(const tString& ctagsPath = _T("TagsView\\ctags.exe")) { m_ctagsExeFilePath = ctagsPath; }
+        void  SetCTagsExePath(const t_string& ctagsPath = _T("TagsView\\ctags.exe")) { m_ctagsExeFilePath = ctagsPath; }
 
         LPCTSTR GetEditorShortName() const;
 
@@ -310,25 +251,25 @@ class CTagsDlg : public CDialog
 
         void deleteAllItems(bool bDelayedRedraw);
         int addListViewItem(int nItem, const tTagData* pTag);
-        HTREEITEM addTreeViewItem(HTREEITEM hParent, const tString& tagName, tTagData* pTag);
-        bool isTagMatchFilter(const tString& tagName) const;
+        HTREEITEM addTreeViewItem(HTREEITEM hParent, const t_string& tagName, tTagData* pTag);
+        bool isTagMatchFilter(const t_string& tagName) const;
         size_t getNumTotalItemsForSorting() const;
         size_t getNumItemsForSorting(const CTagsDlg::file_tags& fileTags) const;
         void sortTagsByLineLV();
         void sortTagsByNameOrTypeLV(eTagsSortMode sortMode);
         void sortTagsTV(eTagsSortMode sortMode);
         void addFileTagsToTV(tTagsByFile& tagsByFile);
-        tString getItemTextLV(int iItem) const;
-        tString getAllItemsTextLV() const;
-        tString getItemTextTV(HTREEITEM hItem) const;
-        tString getItemAndChildrenTextTV(HTREEITEM hItem, const tString& indent = tString()) const;
-        tString getAllItemsTextTV() const;
+        t_string getItemTextLV(int iItem) const;
+        t_string getAllItemsTextLV() const;
+        t_string getItemTextTV(HTREEITEM hItem) const;
+        t_string getItemAndChildrenTextTV(HTREEITEM hItem, const t_string& indent = t_string()) const;
+        t_string getAllItemsTextTV() const;
 
         void checkCTagsExePath();
 
         CTagsResultParser::file_tags::iterator getTagByLine(CTagsResultParser::file_tags& fileTags, const int line);
         CTagsResultParser::file_tags::iterator findTagByLine(CTagsResultParser::file_tags& fileTags, const int line);
-        CTagsResultParser::file_tags::iterator getTagByName(CTagsResultParser::file_tags& fileTags, const tString& tagName);
+        CTagsResultParser::file_tags::iterator getTagByName(CTagsResultParser::file_tags& fileTags, const t_string& tagName);
         std::list<CTagsResultParser::tags_map>::iterator getCachedTagsMapItr(const TCHAR* cszFileName, bool bAddIfNotExist, bool& bJustAdded);
         CTagsResultParser::tags_map* getCachedTagsMap(const TCHAR* cszFileName, bool bAddIfNotExist, bool& bJustAdded);
 
@@ -352,10 +293,10 @@ class CTagsDlg : public CDialog
         CTagsListView   m_lvTags;
         CTagsTreeView   m_tvTags;
         CToolTip        m_ttHints;
-        tString         m_tagFilter;
-        tString         m_ctagsExeFilePath;
-        tString         m_ctagsTempInputFilePath;
-        tString         m_ctagsTempOutputFilePath;
+        t_string        m_tagFilter;
+        t_string        m_ctagsExeFilePath;
+        t_string        m_ctagsTempInputFilePath;
+        t_string        m_ctagsTempOutputFilePath;
         tags_map*       m_tags;
         std::list<tags_map> m_cachedTags;
         COptionsManager m_opt;

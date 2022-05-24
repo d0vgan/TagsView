@@ -2,6 +2,7 @@
 #define _tags_editor_wrapper_h_
 //---------------------------------------------------------------------------
 #include "TagsDlg.h"
+#include "TagsCommon.h"
 #include <windows.h>
 #include <string>
 #include <map>
@@ -11,17 +12,8 @@
 class IEditorWrapper
 {
     public:
-        typedef std::basic_string<TCHAR> t_string;
-
-        class string_cmp_less
-        {
-            public:
-                bool operator() (const t_string& s1, const t_string& s2) const
-                {
-                    return (lstrcmpi(s1.c_str(), s2.c_str()) < 0);
-                }
-        };
-
+        typedef TagsCommon::t_string t_string;
+        typedef TagsCommon::string_cmp_less string_cmp_less;
         typedef std::set<t_string, string_cmp_less> file_set;
 
         struct sEditorColors {

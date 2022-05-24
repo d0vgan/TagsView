@@ -4,6 +4,8 @@
 #include <vector>
 #include <windows.h>
 
+using namespace TagsCommon;
+
 namespace
 {
     // searching for c in [s_begin .. s_end)
@@ -96,10 +98,10 @@ namespace
         string_replace_all(s, escaped_slash, single_slash);
     }
 
-    CTagsResultParser::t_string to_tstring(const std::string& in, unsigned int nParseFlags, std::vector<TCHAR>& buf)
+    t_string to_tstring(const std::string& in, unsigned int nParseFlags, std::vector<TCHAR>& buf)
     {
         if ( in.empty() )
-            return CTagsResultParser::t_string();
+            return t_string();
 
         UINT uCodePage = (nParseFlags & CTagsResultParser::PF_ISUTF8) ? CP_UTF8 : CP_ACP;
         int nLen = ::MultiByteToWideChar(uCodePage, 0, in.c_str(), static_cast<int>(in.length()), NULL, 0);
@@ -107,7 +109,7 @@ namespace
         buf.data()[0] = 0; // just in case
         ::MultiByteToWideChar(uCodePage, 0, in.c_str(), static_cast<int>(in.length()), buf.data(), nLen + 1);
         buf.data()[nLen] = 0; // the trailing '\0'
-        return CTagsResultParser::t_string(buf.data(), nLen);
+        return t_string(buf.data(), nLen);
     }
 }
 

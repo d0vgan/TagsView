@@ -348,7 +348,7 @@ void CTagsViewPlugin::Initialize(HINSTANCE hInstance)
 
     if ( nDirLen > 0 )
     {
-        tString ctagsExePath = szCurDir;
+        t_string ctagsExePath = szCurDir;
         ctagsExePath += _T("\\TagsView\\ctags.exe");
         m_tagsDlg.SetCTagsExePath(ctagsExePath);
     }
