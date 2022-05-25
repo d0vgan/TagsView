@@ -571,9 +571,10 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
     CConsoleOutputRedirector cor;
     CProcess proc;
     tCTagsThreadParam* tt = (tCTagsThreadParam *) lpParam;
+    CTagsDlg* pDlg = tt->pDlg;
     bool bTagsAdded = false;
 
-    if ( tt->pDlg->GetHwnd() )
+    if ( pDlg && pDlg->GetHwnd() )
     {
         std::unique_ptr<char[]> pTempTags;
 
@@ -609,7 +610,7 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
             }
         }
 
-        COptionsManager& opt = tt->pDlg->GetOptions();
+        COptionsManager& opt = pDlg->GetOptions();
         if ( opt.getInt(CTagsDlg::OPT_DEBUG_DELETETEMPINPUTFILE) == CTagsDlg::DTF_ALWAYSDELETE )
         {
             DeleteTempFile(tt->temp_input_file);
@@ -619,18 +620,18 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
             DeleteTempFile(tt->temp_output_file);
         }
 
-        ::WaitForSingleObject(tt->pDlg->m_hTagsThreadEvent, 4000);
-        if ( tt->dwThreadID == tt->pDlg->m_dwLastTagsThreadID )
+        ::WaitForSingleObject(pDlg->m_hTagsThreadEvent, 4000);
+        if ( tt->dwThreadID == pDlg->m_dwLastTagsThreadID )
         {
-            if ( tt->pDlg->GetHwnd() /*&& tt->pDlg->IsWindowVisible()*/ )
+            if ( pDlg->GetHwnd() /*&& pDlg->IsWindowVisible()*/ )
             {
-                const CEditorWrapper* pEdWr = tt->pDlg->m_pEdWr;
+                const CEditorWrapper* pEdWr = pDlg->m_pEdWr;
                 if ( pEdWr && (pEdWr->ewGetFilePathName() == tt->source_file_name) )
                 {
                     if ( tt->temp_output_file.empty() )
-                        tt->pDlg->OnAddTags( cor.GetOutputString().c_str(), tt );
+                        pDlg->OnAddTags( cor.GetOutputString().c_str(), tt );
                     else
-                        tt->pDlg->OnAddTags( pTempTags.get(), tt );
+                        pDlg->OnAddTags( pTempTags.get(), tt );
 
                     bTagsAdded = true;
                 }
@@ -639,7 +640,6 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
     }
     else
     {
-        CTagsDlg* pDlg = tt->pDlg;
         if ( !pDlg || pDlg->GetOptions().getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
         {
             DeleteTempFile(tt->temp_input_file);
@@ -652,18 +652,21 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
 
     if ( !bTagsAdded )
     {
-        CTagsDlg* pDlg = tt->pDlg;
         if ( !pDlg || pDlg->GetOptions().getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
         {
             DeleteTempFile(tt->temp_output_file);
         }
-        if ( pDlg )
+        if ( pDlg && pDlg->m_tbButtons.GetHwnd() )
         {
             pDlg->m_tbButtons.EnableButton(IDM_PARSE);
         }
     }
 
-    ::InterlockedDecrement(&tt->pDlg->m_nTagsThreadCount);
+    if ( pDlg )
+    {
+        pDlg->removeCTagsThreadForFile(tt->source_file_name);
+        ::InterlockedDecrement(&pDlg->m_nTagsThreadCount);
+    }
     delete tt;
 
     return 0;
@@ -752,6 +755,10 @@ void CTagsDlg::OnAddTags(const char* s, const tCTagsThreadParam* tt)
         nParseFlags |= CTagsResultParser::PF_ISUTF8;
     }
 
+    tags_map tags;
+    if ( !m_tags )
+        m_tags = &tags;
+
     CTagsResultParser::Parse(
         s,
         nParseFlags,
@@ -761,6 +768,12 @@ void CTagsDlg::OnAddTags(const char* s, const tCTagsThreadParam* tt)
             tt->temp_input_file.empty() ? t_string() : tt->source_file_name
         ) 
     );
+
+    if ( m_tags == &tags )
+    {
+        m_cachedTags.emplace_back(std::move(tags));
+        m_tags = &m_cachedTags.back();
+    }
 
     // let's update tags view in the primary thread
     ::SendNotifyMessage( this->GetHwnd(), WM_UPDATETAGSVIEW, 0, 0 );
@@ -1202,11 +1215,10 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
         return;
     }
 
-    bool bJustAdded = false;
     tags_map* prev_tags = m_tags;
-    m_tags = getCachedTagsMap(cszFileName, true, bJustAdded);
+    m_tags = getCachedTagsMap(cszFileName); // can be nullptr
 
-    if ( !bJustAdded && !bReparsePhysicalFile )
+    if ( m_tags && !bReparsePhysicalFile )
     {
         if ( m_tags != prev_tags )
         {
@@ -1247,6 +1259,9 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
                 return;
         }
     }
+
+    if ( !addCTagsThreadForFile(cszFileName) )
+        return;
 
     t_string ctagsOptPath = m_ctagsExeFilePath;
     if ( ctagsOptPath.length() > 3 )
@@ -1384,10 +1399,18 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
     HANDLE hThread = ::CreateThread(NULL, 0, CTagsThreadProc, tt, 0, &tt->dwThreadID);
     if ( hThread )
     {
-        m_tbButtons.DisableButton(IDM_PARSE);
+        if ( m_tbButtons.GetHwnd() )
+        {
+            m_tbButtons.DisableButton(IDM_PARSE);
+        }
         ::InterlockedIncrement(&m_nTagsThreadCount);
         m_dwLastTagsThreadID = tt->dwThreadID;
         ::CloseHandle(hThread);
+    }
+    else
+    {
+        removeCTagsThreadForFile(tt->source_file_name);
+        delete tt;
     }
     ::SetEvent(m_hTagsThreadEvent);
 }
@@ -1628,7 +1651,10 @@ void CTagsDlg::UpdateTagsView()
     m_sortMode = TSM_NONE;
     SetViewMode(viewMode, sortMode);
     UpdateNavigationButtons();
-    m_tbButtons.EnableButton(IDM_PARSE);
+    if ( m_tbButtons.GetHwnd() )
+    {
+        m_tbButtons.EnableButton(IDM_PARSE);
+    }
 }
 
 void CTagsDlg::UpdateNavigationButtons()
@@ -2014,32 +2040,33 @@ CTagsResultParser::file_tags::iterator CTagsDlg::getTagByName(CTagsResultParser:
     );
 }
 
-std::list<CTagsResultParser::tags_map>::iterator CTagsDlg::getCachedTagsMapItr(const TCHAR* cszFileName, bool bAddIfNotExist, bool& bJustAdded)
+CTagsResultParser::tags_map* CTagsDlg::getCachedTagsMap(const TCHAR* cszFileName)
 {
-    bJustAdded = false;
-
     auto itrTags = std::find_if(m_cachedTags.begin(), m_cachedTags.end(),
         [&cszFileName](const tags_map& tagsMap){ return (tagsMap.find(cszFileName) != tagsMap.end()); }
     );
-    if ( itrTags != m_cachedTags.end() )
-        return itrTags;
-
-    if ( bAddIfNotExist )
-    {
-        bJustAdded = true;
-        m_cachedTags.push_back(tags_map());
-        itrTags = m_cachedTags.end();
-        --itrTags; // iterator to the last element
-        itrTags->insert( std::make_pair(t_string(cszFileName), file_tags()) );
-    }
-
-    return itrTags;
+    return ( (itrTags != m_cachedTags.end()) ? &(*itrTags) : nullptr );
 }
 
-CTagsResultParser::tags_map* CTagsDlg::getCachedTagsMap(const TCHAR* cszFileName, bool bAddIfNotExist, bool& bJustAdded)
+bool CTagsDlg::addCTagsThreadForFile(const t_string& filePath)
 {
-    auto itrTags = getCachedTagsMapItr(cszFileName, bAddIfNotExist, bJustAdded);
-    return ( (itrTags != m_cachedTags.end()) ? &(*itrTags) : nullptr );
+    bool bAdded = false;
+
+    m_csCTagsThreads.Lock();
+    if ( m_ctagsThreads.insert(filePath).second == true )
+    {
+        bAdded = true;
+    }
+    m_csCTagsThreads.Release();
+
+    return bAdded;
+}
+
+void CTagsDlg::removeCTagsThreadForFile(const t_string& filePath)
+{
+    m_csCTagsThreads.Lock();
+    m_ctagsThreads.erase(filePath);
+    m_csCTagsThreads.Release();
 }
 
 void CTagsDlg::initOptions()

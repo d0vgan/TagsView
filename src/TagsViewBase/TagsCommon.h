@@ -26,18 +26,18 @@ namespace TagsCommon
         t_string tagScope;
         int      line;
         int      end_line;
+        size_t   nFileDirLen;
         const t_string* pFilePath;
-        size_t nFileDirLen;
         union uData {
             void* p;
             int   i;
         } data;
 
         tTagData(const t_string& tagName_, const t_string& tagPattern_, const t_string& tagType_,
-                 const t_string& tagScope_, int line_, int end_line_)
+                 const t_string& tagScope_, int line_, int end_line_, size_t nFileDirLen_)
           : tagName(tagName_), tagPattern(tagPattern_), tagType(tagType_),
             tagScope(tagScope_), line(line_), end_line(end_line_),
-            pFilePath(nullptr), nFileDirLen(0)
+            nFileDirLen(nFileDirLen_), pFilePath(nullptr)
         {
             data.p = nullptr;
         }

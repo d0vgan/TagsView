@@ -297,9 +297,9 @@ void CTagsResultParser::Parse(const char* s, unsigned int nParseFlags, tParseCon
                     to_tstring(tagData.tagType, nParseFlags, buf),
                     to_tstring(tagData.tagScope, nParseFlags, buf),
                     tagData.line,
-                    tagData.end_line
+                    tagData.end_line,
+                    context.inputDir.length()
                 );
-                pTag->nFileDirLen = context.inputDir.length();
 
                 filePath = context.inputFileOverride.empty() ? to_tstring(tagData.filePath, nParseFlags, buf) : context.inputFileOverride;
                 itrFileTags = m.find(filePath);

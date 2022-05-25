@@ -5,6 +5,7 @@
 //----------------------------------------------------------------------------
 
 static tTbData dockData;
+static bool    isNppReady = false;
 static TCHAR   szPluginName[128] = _T("TagsView");
 static TCHAR   szPluginNameDll[128] = _T("TagsView.dll");
 
@@ -210,8 +211,7 @@ LRESULT CTagsViewPlugin::SendNppMsg(UINT uMsg, WPARAM wParam , LPARAM lParam )
 
 void CTagsViewPlugin::OnNppReady()
 {
-    // InitOptions();
-    // CreateTagsDlg();
+    isNppReady = true;
 
     BOOL bCheck = (m_tagsDlg.GetHwnd() && m_tagsDlg.IsWindowVisible()) ? TRUE : FALSE;
     SendNppMsg( NPPM_SETMENUITEMCHECK,
@@ -224,6 +224,11 @@ void CTagsViewPlugin::OnNppReady()
         m_nppData._nppHandle, GWLP_WNDPROC, 
         (LONG_PTR) nppPluginWndProc );
 #endif
+
+    if ( m_tagsDlg.GetHwnd() && m_tagsDlg.IsWindowVisible() )
+    {
+        m_tagsDlg.ReparseCurrentFile();
+    }
 }
 
 void CTagsViewPlugin::OnNppShutdown()
@@ -421,7 +426,7 @@ void funcTagsView()
       thePlugin.GetTagsDlg().IsWindowVisible()
     );
 
-    if ( bParseFile )
+    if ( bParseFile && isNppReady )
     {
         thePlugin.GetTagsDlg().ReparseCurrentFile();
     }
@@ -499,7 +504,10 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification * pscn)
         switch ( pscn->nmhdr.code )
         {
             case NPPN_BUFFERACTIVATED:
-                thePlugin.ewOnFileActivated();
+                if ( isNppReady )
+                {
+                    thePlugin.ewOnFileActivated();
+                }
                 break;
 
             case NPPN_FILESAVED:
@@ -507,7 +515,10 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification * pscn)
                 break;
 
             case NPPN_FILEOPENED:
-                thePlugin.ewOnFileOpened();
+                if ( isNppReady )
+                {
+                    thePlugin.ewOnFileOpened();
+                }
                 break;
 
             case NPPN_FILEBEFORECLOSE:

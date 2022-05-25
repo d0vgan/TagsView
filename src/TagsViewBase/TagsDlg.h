@@ -8,6 +8,7 @@
 #include "win32++/include/wxx_criticalsection.h"
 #include <vector>
 #include <map>
+#include <set>
 #include <list>
 #include "OptionsManager.h"
 #include "TagsCommon.h"
@@ -270,8 +271,10 @@ class CTagsDlg : public CDialog
         CTagsResultParser::file_tags::iterator getTagByLine(CTagsResultParser::file_tags& fileTags, const int line);
         CTagsResultParser::file_tags::iterator findTagByLine(CTagsResultParser::file_tags& fileTags, const int line);
         CTagsResultParser::file_tags::iterator getTagByName(CTagsResultParser::file_tags& fileTags, const t_string& tagName);
-        std::list<CTagsResultParser::tags_map>::iterator getCachedTagsMapItr(const TCHAR* cszFileName, bool bAddIfNotExist, bool& bJustAdded);
-        CTagsResultParser::tags_map* getCachedTagsMap(const TCHAR* cszFileName, bool bAddIfNotExist, bool& bJustAdded);
+        CTagsResultParser::tags_map* getCachedTagsMap(const TCHAR* cszFileName);
+
+        bool addCTagsThreadForFile(const t_string& filePath);
+        void removeCTagsThreadForFile(const t_string& filePath);
 
         virtual void initOptions();
 
@@ -287,6 +290,7 @@ class CTagsDlg : public CDialog
         DWORD           m_dwLastTagsThreadID;
         HANDLE          m_hTagsThreadEvent;
         CCriticalSection m_csTagsItems;
+        CCriticalSection m_csCTagsThreads;
         CImageList      m_tbImageList;
         CToolBar        m_tbButtons;
         CTagsFilterEdit m_edFilter;
@@ -309,6 +313,7 @@ class CTagsDlg : public CDialog
         int             m_prevSelStart;
         bool            m_isUpdatingSelToItem;
         volatile LONG m_nTagsThreadCount;
+        std::set<t_string, TagsCommon::string_cmp_less> m_ctagsThreads; // acces it under m_csCTagsThreads!
         std::map<int, Win32xx::CString> m_DispInfoText;
 };
 
