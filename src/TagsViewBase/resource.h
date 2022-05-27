@@ -28,7 +28,9 @@
 #define IDC_CH_OPT_PARSEONSAVE                  2001
 #define IDC_CH_OPT_EDITORCOLORS                 2011
 #define IDC_CH_OPT_SHOWTOOLTIPS                 2012
-#define IDC_CH_OPT_ESCFOCUSTOEDITOR             2013
+#define IDC_CH_OPT_NESTEDSCOPETREE              2013
+#define IDC_CH_OPT_DBLCLICKTREE                 2014
+#define IDC_CH_OPT_ESCFOCUSTOEDITOR             2015
 #define IDC_CH_OPT_CTAGSSTDOUT                  2021
 #define IDC_CH_OPT_SCANFOLDER                   2031
 #define IDC_CH_OPT_SCANFOLDERRECURSIVELY        2032

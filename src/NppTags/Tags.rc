@@ -35,23 +35,59 @@ FONT 8, "Ms Shell Dlg", 0, 0, 1
 }
 
 
-IDD_SETTINGS DIALOG 0, 0, 186, 130
+IDD_SETTINGS DIALOG 0, 0, 186, 154
 STYLE DS_3DLOOK | DS_CENTER | DS_MODALFRAME | DS_SHELLFONT | WS_CAPTION | WS_VISIBLE | WS_POPUP | WS_SYSMENU
 CAPTION "TagsView Settings"
 FONT 8, "Ms Shell Dlg"
 {
-    DEFPUSHBUTTON   "OK", IDOK, 35, 110, 50, 14, 0, WS_EX_LEFT
-    PUSHBUTTON      "Cancel", IDCANCEL, 95, 110, 50, 14, 0, WS_EX_LEFT
+    DEFPUSHBUTTON   "OK", IDOK, 35, 134, 50, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "Cancel", IDCANCEL, 95, 134, 50, 14, 0, WS_EX_LEFT
     AUTOCHECKBOX    "Parse on save (auto-parse file when it is saved)", IDC_CH_OPT_PARSEONSAVE, 5, 10, 175, 8, 0, WS_EX_LEFT
     AUTOCHECKBOX    "Use Editor colors", IDC_CH_OPT_EDITORCOLORS, 5, 26, 175, 8, 0, WS_EX_LEFT
     AUTOCHECKBOX    "Show tooltips", IDC_CH_OPT_SHOWTOOLTIPS, 5, 38, 175, 8, 0, WS_EX_LEFT
-    AUTOCHECKBOX    "Esc sets the focus to Editor", IDC_CH_OPT_ESCFOCUSTOEDITOR, 5, 50, 175, 8, 0, WS_EX_LEFT
-    AUTOCHECKBOX    "ctags: output to stdout instead of temp file", IDC_CH_OPT_CTAGSSTDOUT, 5, 66, 175, 8, 0, WS_EX_LEFT
-    AUTOCHECKBOX    "Scan similar files in a folder", IDC_CH_OPT_SCANFOLDER, 5, 78, 175, 8, 0, WS_EX_LEFT
+    AUTOCHECKBOX    "Represent nested scopes as nested tree nodes", IDC_CH_OPT_NESTEDSCOPETREE, 5, 50, 175, 8, 0, WS_EX_LEFT
+    AUTOCHECKBOX    "DblClick expands/collapses tree nodes", IDC_CH_OPT_DBLCLICKTREE, 5, 62, 175, 8, 0, WS_EX_LEFT
+    AUTOCHECKBOX    "Esc sets the focus to Editor", IDC_CH_OPT_ESCFOCUSTOEDITOR, 5, 74, 175, 8, 0, WS_EX_LEFT
+    AUTOCHECKBOX    "ctags: output to stdout instead of temp file", IDC_CH_OPT_CTAGSSTDOUT, 5, 90, 175, 8, 0, WS_EX_LEFT
+    AUTOCHECKBOX    "Scan similar files in a folder", IDC_CH_OPT_SCANFOLDER, 5, 102, 175, 8, 0, WS_EX_LEFT
     // Note: the recursive scanning may generate a tag file of several MB that takes toooooo long to visualize
-    //AUTOCHECKBOX    "Scan folders recursively", IDC_CH_OPT_SCANFOLDERRECURSIVELY, 5, 90, 175, 8, 0, WS_EX_LEFT
+    //AUTOCHECKBOX    "Scan folders recursively", IDC_CH_OPT_SCANFOLDERRECURSIVELY, 5, 114, 175, 8, 0, WS_EX_LEFT
 }
 
+
+IDR_TAGSVIEW_MENU MENU
+{
+    POPUP "TreePopup1"
+    {
+        MENUITEM "Copy current item to Clipboard",                  IDM_TREE_COPYITEMTOCLIPBOARD
+        MENUITEM "Copy all items to Clipboard",                     IDM_TREE_COPYALLITEMSTOCLIPBOARD
+        MENUITEM ""                                                 -1
+        MENUITEM "Expand all nodes",                                IDM_TREE_EXPANDALLNODES
+        MENUITEM "Collapse all nodes",                              IDM_TREE_COLLAPSEALLNODES
+        MENUITEM ""                                                 -1
+        MENUITEM "Settings",                                        IDM_SETTINGS
+    }
+    POPUP "TreePopup2"
+    {
+        MENUITEM "Copy current item to Clipboard",                  IDM_TREE_COPYITEMTOCLIPBOARD
+        MENUITEM "Copy current item and its children to Clipboard", IDM_TREE_COPYITEMANDCHILDRENTOCLIPBOARD
+        MENUITEM "Copy all items to Clipboard",                     IDM_TREE_COPYALLITEMSTOCLIPBOARD
+        MENUITEM ""                                                 -1
+        MENUITEM "Expand child nodes",                              IDM_TREE_EXPANDCHILDNODES
+        MENUITEM "Collapse child nodes",                            IDM_TREE_COLLAPSECHILDNODES
+        MENUITEM "Expand all nodes",                                IDM_TREE_EXPANDALLNODES
+        MENUITEM "Collapse all nodes",                              IDM_TREE_COLLAPSEALLNODES
+        MENUITEM ""                                                 -1
+        MENUITEM "Settings",                                        IDM_SETTINGS
+    }
+    POPUP "ListPopup"
+    {
+        MENUITEM "Copy current item to Clipboard",                  IDM_LIST_COPYITEMTOCLIPBOARD
+        MENUITEM "Copy all items to Clipboard",                     IDM_LIST_COPYALLITEMSTOCLIPBOARD
+        MENUITEM ""                                                 -1
+        MENUITEM "Settings",                                        IDM_SETTINGS
+    }
+}
 
 
 //

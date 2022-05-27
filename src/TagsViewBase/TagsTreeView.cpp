@@ -30,14 +30,10 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 if ( pTagData )
                 {
                     m_pDlg->PostMessage(CTagsDlg::WM_TAGDBLCLICKED, 0, (LPARAM) pTagData);
-
-                    LRESULT lResult = 0;
-                    if ( uMsg == WM_LBUTTONDBLCLK )
-                    {
-                        lResult = WndProcDefault(uMsg, wParam, lParam);
-                    }
-                    return lResult;
                 }
+
+                if ( (uMsg != WM_LBUTTONDBLCLK) || !m_pDlg->GetOptions().getBool(CTagsDlg::OPT_VIEW_DBLCLICKTREE) )
+                    return 0;
             }
         }
         else if ( uMsg == WM_CHAR )
@@ -85,12 +81,8 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                                 lpnmdi->lpszText = const_cast<TCHAR*>(m_lastTooltipText.c_str());
                             }
 
-                            //m_lastPoint = pt;
                             return 0;
                         }
-
-                        //m_lastPoint.x = 0;
-                        //m_lastPoint.y = 0;
                     }
                 }
             }

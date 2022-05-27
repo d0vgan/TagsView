@@ -27,13 +27,16 @@ namespace
     }
 
     // replaces all occurrences of `what` with `with`
-    void string_replace_all(std::string& str, const std::string& what, const std::string& with)
+    void string_replace_all(std::string& str, const char* what, const char* with)
     {
+        const size_t len_what = strlen(what);
+        const size_t len_with = strlen(with);
+
         size_t pos = 0;
-        while ( (pos = str.find(what, pos)) != std::string::npos )
+        while ( (pos = str.find(what, pos, len_what)) != std::string::npos )
         {
-            str.replace(pos, what.length(), with);
-            pos += with.length();
+            str.replace(pos, len_what, with, len_with);
+            pos += len_with;
         }
     }
 
@@ -86,16 +89,10 @@ namespace
 
     void preprocess_tag_string(std::string& s)
     {
-        static const std::string escaped_backslash = "\\\\";
-        static const std::string single_backslash = "\\";
-
-        static const std::string escaped_slash = "\\/";
-        static const std::string single_slash = "/";
-
         delete_extra_spaces(s);
         string_replace_all(s, '\t', ' ');
-        string_replace_all(s, escaped_backslash, single_backslash);
-        string_replace_all(s, escaped_slash, single_slash);
+        string_replace_all(s, "\\\\", "\\");
+        string_replace_all(s, "\\/", "/");
     }
 
     t_string to_tstring(const std::string& in, unsigned int nParseFlags, std::vector<TCHAR>& buf)

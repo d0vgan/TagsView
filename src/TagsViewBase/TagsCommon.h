@@ -4,12 +4,13 @@
 #include <windows.h>
 #include <tchar.h>
 #include <string>
+#include <list>
 
 namespace TagsCommon
 {
     typedef std::basic_string<TCHAR> t_string;
 
-    class string_cmp_less
+    class tstring_cmp_less
     {
     public:
         bool operator() (const t_string& s1, const t_string& s2) const
@@ -59,15 +60,23 @@ namespace TagsCommon
         {
             return (pFilePath && !pFilePath->empty());
         }
+
+        bool isTagTypeAllowingMultiScope() const
+        {
+            // tags of this type may have multiple scopes that can be merged
+            return (lstrcmpi(tagType.c_str(), _T("namespace")) == 0);
+        }
     };
 
-    bool isFileExist(LPCTSTR pszFilePath);
-    LPCTSTR getFileName(LPCTSTR pszFilePathName);
-    LPCTSTR getFileName(const t_string& filePathName);
-    LPCTSTR getFileName(const tTagData* pTag);
-    LPCTSTR getFileExt(LPCTSTR pszFilePathName);
+    bool     isFileExist(LPCTSTR pszFilePath);
+    LPCTSTR  getFileName(LPCTSTR pszFilePathName);
+    LPCTSTR  getFileName(const t_string& filePathName);
+    LPCTSTR  getFileName(const tTagData* pTag);
+    LPCTSTR  getFileExt(LPCTSTR pszFilePathName);
     t_string getFileDirectory(const t_string& filePathName);
-    bool setClipboardText(const t_string& text, HWND hWndOwner);
+    bool     setClipboardText(const t_string& text, HWND hWndOwner);
+    t_string getCtagsLangFamily(const t_string& filePath);
+    std::list<t_string> getRelatedSourceFiles(const t_string& fileName);
 }
 
 //---------------------------------------------------------------------------

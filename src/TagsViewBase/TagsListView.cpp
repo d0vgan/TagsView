@@ -90,12 +90,8 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                                 lpnmdi->lpszText = const_cast<TCHAR*>(m_lastTooltipText.c_str());
                             }
 
-                            //m_lastPoint = pt;
                             return 0;
                         }
-
-                        //m_lastPoint.x = 0;
-                        //m_lastPoint.y = 0;
                     }
                 }
             }

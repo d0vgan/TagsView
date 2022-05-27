@@ -19,7 +19,6 @@ class CTagsTreeView : public CTreeView, public CTagsDlgChild
         virtual LRESULT WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 
     protected:
-        CPoint m_lastPoint;
         TagsCommon::t_string m_lastTooltipText;
 };
 

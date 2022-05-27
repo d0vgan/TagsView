@@ -60,6 +60,19 @@ SETTINGS
   Show tooltips
   - TagsView shows tooltips in its TreeView and ListView.
 
+  Represent nested scopes as nested tree nodes
+  - When checked, TagsView always represents the scope of "X.Y.Z" or "X::Y::Z" as nested tree items:
+        X        // node
+        `- Y     // subnode
+           `- Z  // leaf
+    When unchecked, TagsView may create unnested tree items:
+        X        // node
+        X.Y      // node
+          `- Z   // leaf
+
+  DblClick expands/collapses tree nodes
+  - When left mouse button is double-clicked, the tree node under the mouse cursor is expanded or collapsed.
+
   Esc sets the focus to Editor
   - When Esc is pressed in TagsView, the focus goes to the Editor's editing window.
     (Note: you can always use Ctrl+BackSpace to clear the TagsView's filter).
@@ -76,18 +89,6 @@ SETTINGS
 MANUAL SETTINGS
 
   Notepad++
-
-    [View]
-    NestedScopeTree=1
-
-      When this setting is set to 1, TagsView always represents the scope of "X.Y.Z" or "X::Y::Z" as nested tree items:
-        X        // node
-        `- Y     // subnode
-           `- Z  // leaf
-      When this setting is set to 0, TagsView may create unnested tree items:
-        X        // node
-        X.Y      // node
-          `- Z   // leaf
 
     [Ctags]
     SkipFileExts=.txt
@@ -112,17 +113,6 @@ MANUAL SETTINGS
   AkelPad
 
     [Options]
-    View\NestedScopeTree=1
-
-      When this setting is set to 1, TagsView always represents the scope of "X.Y.Z" or "X::Y::Z" as nested tree items:
-        X        // node
-        `- Y     // subnode
-           `- Z  // leaf
-      When this setting is set to 0, TagsView may create unnested tree items:
-        X        // node
-        X.Y      // node
-          `- Z   // leaf
-
     Ctags\SkipFileExts=.txt
 
       This setting specifies files extensions for which ctags will not be run.

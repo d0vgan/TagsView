@@ -61,12 +61,14 @@ class CTagsDlg : public CDialog
         };
 
         enum eMsg {
-            WM_UPDATETAGSVIEW  = (WM_USER + 7010),
-            WM_CLOSETAGSVIEW   = (WM_USER + 7020),
-            WM_FOCUSTOEDITOR   = (WM_USER + 7023),
-            WM_TAGDBLCLICKED   = (WM_USER + 7030),
-            WM_CTAGSPATHFAILED = (WM_USER + 7050),
-            WM_FILECLOSED      = (WM_USER + 7070)
+            WM_UPDATETAGSVIEW   = (WM_USER + 7010),
+            WM_CLOSETAGSVIEW    = (WM_USER + 7020),
+            WM_FOCUSTOEDITOR    = (WM_USER + 7023),
+            WM_TAGDBLCLICKED    = (WM_USER + 7030),
+            WM_CTAGSPATHFAILED  = (WM_USER + 7050),
+            WM_FILECLOSED       = (WM_USER + 7070),
+            WM_CLEARCACHEDTAGS  = (WM_USER + 7101),
+            WM_PURIFYCACHEDTAGS = (WM_USER + 7102)
         };
 
         enum eDeleteTempFile {
@@ -81,8 +83,9 @@ class CTagsDlg : public CDialog
             OPT_VIEW_WIDTH,
             OPT_VIEW_NAMEWIDTH,
             OPT_VIEW_SHOWTOOLTIPS,
-            OPT_VIEW_ESCFOCUSTOEDITOR,
             OPT_VIEW_NESTEDSCOPETREE,
+            OPT_VIEW_DBLCLICKTREE,
+            OPT_VIEW_ESCFOCUSTOEDITOR,
 
             OPT_COLORS_USEEDITORCOLORS,
             //OPT_COLORS_BKGND,
@@ -106,6 +109,7 @@ class CTagsDlg : public CDialog
 
         typedef TagsCommon::t_string t_string;
         typedef TagsCommon::tTagData tTagData;
+        typedef TagsCommon::tstring_cmp_less tstring_cmp_less;
         typedef CTagsResultParser::file_tags file_tags;
         typedef CTagsResultParser::tags_map tags_map;
 
@@ -268,17 +272,19 @@ class CTagsDlg : public CDialog
 
         void checkCTagsExePath();
 
-        CTagsResultParser::file_tags::iterator getTagByLine(CTagsResultParser::file_tags& fileTags, const int line);
-        CTagsResultParser::file_tags::iterator findTagByLine(CTagsResultParser::file_tags& fileTags, const int line);
-        CTagsResultParser::file_tags::iterator getTagByName(CTagsResultParser::file_tags& fileTags, const t_string& tagName);
-        CTagsResultParser::tags_map* getCachedTagsMap(const TCHAR* cszFileName);
+        file_tags::iterator getTagByLine(file_tags& fileTags, const int line);
+        file_tags::iterator findTagByLine(file_tags& fileTags, const int line);
+        file_tags::iterator getTagByName(file_tags& fileTags, const t_string& tagName);
+        std::list<tags_map>::iterator getCachedTagsMapItr(const TCHAR* cszFileName); // call it under m_csTagsMap!
+        tags_map* getCachedTagsMap(const TCHAR* cszFileName); // call it under m_csTagsMap!
 
         bool addCTagsThreadForFile(const t_string& filePath);
         void removeCTagsThreadForFile(const t_string& filePath);
+        bool hasAnyCTagsThread() const;
 
         virtual void initOptions();
 
-        static DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam);
+        static DWORD WINAPI CTagsThreadProc(LPVOID lpParam);
 
     protected:
         friend class CTagsFilterEdit;
@@ -289,8 +295,9 @@ class CTagsDlg : public CDialog
         eTagsSortMode   m_sortMode;
         DWORD           m_dwLastTagsThreadID;
         HANDLE          m_hTagsThreadEvent;
-        CCriticalSection m_csTagsItems;
+        CCriticalSection m_csTagsItemsUI;
         CCriticalSection m_csCTagsThreads;
+        CCriticalSection m_csTagsMap;
         CImageList      m_tbImageList;
         CToolBar        m_tbButtons;
         CTagsFilterEdit m_edFilter;
@@ -302,7 +309,7 @@ class CTagsDlg : public CDialog
         t_string        m_ctagsTempInputFilePath;
         t_string        m_ctagsTempOutputFilePath;
         tags_map*       m_tags;
-        std::list<tags_map> m_cachedTags;
+        std::list<tags_map> m_cachedTags; // access it under m_csTagsMap!
         COptionsManager m_opt;
         COptionsReaderWriter* m_optRdWr;
         CEditorWrapper* m_pEdWr;
@@ -312,8 +319,9 @@ class CTagsDlg : public CDialog
         HBRUSH          m_hBkgndBrush;
         int             m_prevSelStart;
         bool            m_isUpdatingSelToItem;
-        volatile LONG m_nTagsThreadCount;
-        std::set<t_string, TagsCommon::string_cmp_less> m_ctagsThreads; // acces it under m_csCTagsThreads!
+        unsigned int    m_nThreadMsg; // access it under m_csCTagsThreads!
+        volatile mutable LONG m_nTagsThreadCount;
+        std::set<t_string, tstring_cmp_less> m_ctagsThreads; // access it under m_csCTagsThreads!
         std::map<int, Win32xx::CString> m_DispInfoText;
 };
 

@@ -5,7 +5,6 @@
 #include "ConsoleOutputRedirector.h"
 #include "resource.h"
 #include <memory>
-#include <set>
 #include <algorithm>
 
 using namespace TagsCommon;
@@ -242,251 +241,6 @@ namespace
             temp_file += _T(".txt");
         }
     }
-
-    std::list<t_string> getRelatedSourceFiles(const t_string& fileName)
-    {
-        // C/C++ source files
-        static const TCHAR* arrSourceCCpp[] = {
-            _T(".c"),
-            _T(".cc"),
-            _T(".cpp"),
-            _T(".cxx"),
-            nullptr
-        };
-
-        // C/C++ header files
-        static const TCHAR* arrHeaderCCpp[] = {
-            _T(".h"),
-            _T(".hh"),
-            _T(".hpp"),
-            _T(".hxx"),
-            nullptr
-        };
-
-        auto processFileExtensions = [](const t_string& fileName,
-                                        const TCHAR* arrExts1[],
-                                        const TCHAR* arrExts2[],
-                                        std::list<t_string>& relatedFiles) -> bool
-        {
-            int nMatchIndex = -1;
-
-            const TCHAR* pszExt = getFileExt(fileName.c_str());
-            if ( *pszExt )
-            {
-                for ( int i = 0; arrExts1[i] != nullptr && nMatchIndex == -1; ++i )
-                {
-                    if ( lstrcmpi(pszExt, arrExts1[i]) == 0 )
-                        nMatchIndex = i;
-                }
-
-                if ( nMatchIndex != -1 )
-                {
-                    t_string relatedFile = fileName;
-                    for ( int i = 0; arrExts2[i] != nullptr; ++i )
-                    {
-                        relatedFile.erase(relatedFile.rfind(_T('.')));
-                        relatedFile += arrExts2[i];
-                        if ( isFileExist(relatedFile.c_str()) )
-                        {
-                            relatedFiles.push_back(relatedFile);
-                        }
-                    }
-                }
-            }
-
-            return (nMatchIndex != -1);
-        };
-
-        std::list<t_string> relatedFiles;
-
-        if ( processFileExtensions(fileName, arrSourceCCpp, arrHeaderCCpp, relatedFiles) )
-            return relatedFiles;
-
-        if ( processFileExtensions(fileName, arrHeaderCCpp, arrSourceCCpp, relatedFiles) )
-            return relatedFiles;
-
-        return std::list<t_string>();
-    }
-
-    t_string getCtagsLangFamily(const t_string& filePath)
-    {
-        struct tCtagsLangFamily
-        {
-            const TCHAR* cszLangName;
-            std::vector<const TCHAR*> arrLangFiles;
-        };
-
-        // Note: this list can be obtained by running `ctags --list-maps`
-        static const tCtagsLangFamily languages[] = {
-            { _T("Abaqus"),          { _T(".inp") } },
-            { _T("Abc"),             { _T(".abc") } },
-            { _T("Ada"),             { _T(".adb"), _T(".ads"), _T(".ada") } },
-            { _T("Ant"),             { _T("build.xml"), _T(".build.xml"), _T(".ant") } },
-            { _T("Asciidoc"),        { _T(".asc"), _T(".adoc"), _T(".asciidoc") } },
-            { _T("Asm"),             { _T(".a51"), _T(".29k"), _T(".x86"), _T(".asm"), _T(".s") } },
-            { _T("Asp"),             { _T(".asp"), _T(".asa") } },
-            { _T("Autoconf"),        { _T("configure.in"), _T(".in"), _T(".ac") } },
-            { _T("AutoIt"),          { _T(".au3") } },
-            { _T("Automake"),        { _T(".am") } },
-            { _T("Awk"),             { _T(".awk"), _T(".gawk"), _T(".mawk") } },
-            { _T("Basic"),           { _T(".bas"), _T(".bi"), _T(".bm"), _T(".bb"), _T(".pb") } },
-            { _T("BETA"),            { _T(".bet") } },
-            { _T("BibTeX"),          { _T(".bib") } },
-            { _T("Clojure"),         { _T(".clj"), _T(".cljs"), _T(".cljc") } },
-            { _T("CMake"),           { _T("CMakeLists.txt"), _T(".cmake") } },
-            { _T("C"),               { _T(".c") } },
-            { _T("C++"),             { _T(".c++"), _T(".cc"), _T(".cp"), _T(".cpp"), _T(".cxx"), _T(".h"), _T(".h++"), _T(".hh"), _T(".hp"), _T(".hpp"), _T(".hxx"), _T(".inl") } },
-            { _T("CSS"),             { _T(".css") } },
-            { _T("C#"),              { _T(".cs") } },
-            { _T("Ctags"),           { _T(".ctags") } },
-            { _T("Cobol"),           { _T(".cbl"), _T(".cob") } },
-            { _T("CUDA"),            { _T(".cu"), _T(".cuh") } },
-            { _T("D"),               { _T(".d"), _T(".di") } },
-            { _T("Diff"),            { _T(".diff"), _T(".patch") } },
-            { _T("DTD"),             { _T(".dtd"), _T(".mod") } },
-            { _T("DTS"),             { _T(".dts"), _T(".dtsi") } },
-            { _T("DosBatch"),        { _T(".bat"), _T(".cmd") } },
-            { _T("Eiffel"),          { _T(".e") } },
-            { _T("Elixir"),          { _T(".ex"), _T(".exs") } },
-            { _T("EmacsLisp"),       { _T(".el") } },
-            { _T("Erlang"),          { _T(".erl"), _T(".hrl") } },
-            { _T("Falcon"),          { _T(".fal"), _T(".ftd") } },
-            { _T("Flex"),            { _T(".as"), _T(".mxml") } },
-            { _T("Fortran"),         { _T(".f"), _T(".for"), _T(".ftn"), _T(".f77"), _T(".f90"), _T(".f95"), _T(".f03"), _T(".f08"), _T(".f15") } },
-            { _T("Fypp"),            { _T(".fy") } },
-            { _T("Gdbinit"),         { _T(".gdbinit"), _T(".gdb") } },
-            { _T("GDScript"),        { _T(".gd") } },
-            { _T("GemSpec"),         { _T(".gemspec") } },
-            { _T("Go"),              { _T(".go") } },
-            { _T("Haskell"),         { _T(".hs") } },
-            { _T("Haxe"),            { _T(".hx") } },
-            { _T("HTML"),            { _T(".htm"), _T(".html") } },
-            { _T("Iniconf"),         { _T(".ini"), _T(".conf") } },
-            { _T("Inko"),            { _T(".inko") } },
-            { _T("ITcl"),            { _T(".itcl") } },
-            { _T("Java"),            { _T(".java") } },
-            { _T("JavaProperties"),  { _T(".properties") } },
-            { _T("JavaScript"),      { _T(".js"), _T(".jsx"), _T(".mjs") } },
-            { _T("JSON"),            { _T(".json") } },
-            { _T("Julia"),           { _T(".jl") } },
-            { _T("LdScript"),        { _T(".lds.s"), _T("ld.script"), _T(".lds"), _T(".scr"), _T(".ld"), _T(".ldi") } },
-            { _T("LEX"),             { _T(".lex"), _T(".l") } },
-            { _T("Lisp"),            { _T(".cl"), _T(".clisp"), _T(".l"), _T(".lisp"), _T(".lsp") } },
-            { _T("LiterateHaskell"), { _T(".lhs") } },
-            { _T("Lua"),             { _T(".lua") } },
-            { _T("M4"),              { _T(".m4"), _T(".spt") } },
-            { _T("Man"),             { _T(".1"), _T(".2"), _T(".3"), _T(".4"), _T(".5"), _T(".6"), _T(".7"), _T(".8"), _T(".9"), _T(".3pm"), _T(".3stap"), _T(".7stap") } },
-            { _T("Make"),            { _T("makefile"), _T("GNUmakefile"), _T(".mak"), _T(".mk") } },
-            { _T("Markdown"),        { _T(".md"), _T(".markdown") } },
-            { _T("MatLab"),          { _T(".m") } },
-            { _T("Meson"),           { _T("meson.build") } },
-            { _T("MesonOptions"),    { _T("meson_options.txt") } },
-            { _T("Myrddin"),         { _T(".myr") } },
-            { _T("NSIS"),            { _T(".nsi"), _T(".nsh") } },
-            { _T("ObjectiveC"),      { _T(".mm"), _T(".m"), _T(".h") } },
-            { _T("OCaml"),           { _T(".ml"), _T(".mli"), _T(".aug") } },
-            { _T("Org"),             { _T(".org") } },
-            { _T("Passwd"),          { _T("passwd") } },
-            { _T("Pascal"),          { _T(".p"), _T(".pas") } },
-            { _T("Perl"),            { _T(".pl"), _T(".pm"), _T(".ph"), _T(".plx"), _T(".perl") } },
-            { _T("Perl6"),           { _T(".p6"), _T(".pm6"), _T(".pm"), _T(".pl6") } },
-            { _T("PHP"),             { _T(".php"), _T(".php3"), _T(".php4"), _T(".php5"), _T(".php7"), _T(".phtml") } },
-            { _T("Pod"),             { _T(".pod") } },
-            { _T("PowerShell"),      { _T(".ps1"), _T(".psm1") } },
-            { _T("Protobuf"),        { _T(".proto") } },
-            { _T("PuppetManifest"),  { _T(".pp") } },
-            { _T("Python"),          { _T(".py"), _T(".pyx"), _T(".pxd"), _T(".pxi"), _T(".scons"), _T(".wsgi") } },
-            { _T("QemuHX"),          { _T(".hx") } },
-            { _T("RMarkdown"),       { _T(".rmd") } },
-            { _T("R"),               { _T(".r"), _T(".s"), _T(".q") } },
-            { _T("Rake"),            { _T("Rakefile"), _T(".rake") } },
-            { _T("REXX"),            { _T(".cmd"), _T(".rexx"), _T(".rx") } },
-            { _T("Robot"),           { _T(".robot") } },
-            { _T("RpmSpec"),         { _T(".spec") } },
-            { _T("ReStructuredText"),{ _T(".rest"), _T(".rst") } },
-            { _T("Ruby"),            { _T(".rb"), _T(".ruby") } },
-            { _T("Rust"),            { _T(".rs") } },
-            { _T("Scheme"),          { _T(".sch"), _T(".scheme"), _T(".scm"), _T(".sm"), _T(".rkt") } },
-            { _T("SCSS"),            { _T(".scss") } },
-            { _T("Sh"),              { _T(".sh"), _T(".bsh"), _T(".bash"), _T(".ksh"), _T(".zsh"), _T(".ash") } },
-            { _T("SLang"),           { _T(".sl") } },
-            { _T("SML"),             { _T(".sml"), _T(".sig") } },
-            { _T("SQL"),             { _T(".sql") } },
-            { _T("SystemdUnit"),     { _T(".service"), _T(".socket"), _T(".device"), _T(".mount"), _T(".automount"), _T(".swap"), _T(".target"), _T(".path"), _T(".timer"), _T(".snapshot"), _T(".slice") } },
-            { _T("SystemTap"),       { _T(".stp"), _T(".stpm") } },
-            { _T("Tcl"),             { _T(".tcl"), _T(".tk"), _T(".wish"), _T(".exp") } },
-            { _T("Tex"),             { _T(".tex") } },
-            { _T("TTCN"),            { _T(".ttcn"), _T(".ttcn3") } },
-            { _T("Txt2tags"),        { _T(".t2t") } },
-            { _T("TypeScript"),      { _T(".ts") } },
-            { _T("Vera"),            { _T(".vr"), _T(".vri"), _T(".vrh") } },
-            { _T("Verilog"),         { _T(".v") } },
-            { _T("SystemVerilog"),   { _T(".sv"), _T(".svh"), _T(".svi") } },
-            { _T("VHDL"),            { _T(".vhdl"), _T(".vhd") } },
-            { _T("Vim"),             { _T("vimrc"), _T(".vimrc"), _T("_vimrc"), _T("gvimrc"), _T(".gvimrc"), _T("_gvimrc"), _T(".vim"), _T(".vba") } },
-            { _T("WindRes"),         { _T(".rc") } },
-            { _T("YACC"),            { _T(".y") } },
-            { _T("YumRepo"),         { _T(".repo") } },
-            { _T("Zephir"),          { _T(".zep") } },
-            { _T("Glade"),           { _T(".glade") } },
-            { _T("Maven2"),          { _T("pom.xml"), _T(".pom"), _T(".xml") } },
-            { _T("PlistXML"),        { _T(".plist") } },
-            { _T("RelaxNG"),         { _T(".rng") } },
-            { _T("SVG"),             { _T(".svg") } },
-            { _T("XML"),             { _T(".xml") } },
-            { _T("XSLT"),            { _T(".xsl"), _T(".xslt") } },
-            { _T("Yaml"),            { _T(".yml"), _T(".yaml") } },
-            { _T("OpenAPI"),         { _T("openapi.yaml") } },
-            { _T("Varlink"),         { _T(".varlink") } },
-            { _T("Kotlin"),          { _T(".kt"), _T(".kts") } },
-            { _T("Thrift"),          { _T(".thrift") } },
-            { _T("Elm"),             { _T(".elm") } },
-            { _T("RDoc"),            { _T(".rdoc") } }
-        };
-
-        auto ends_with = [](const t_string& fileName, const TCHAR* cszEnd) -> bool
-        {
-            size_t nEndLen = lstrlen(cszEnd);
-            if ( nEndLen <= fileName.length() )
-            {
-                if ( lstrcmpi(fileName.c_str() + fileName.length() - nEndLen, cszEnd) == 0 )
-                    return true;
-            }
-            return false;
-        };
-
-        const TCHAR* pszExt = getFileExt(filePath.c_str());
-        const TCHAR* pszFileName = getFileName(filePath);
-        for ( const tCtagsLangFamily& lang : languages )
-        {
-            for ( const TCHAR* pattern : lang.arrLangFiles )
-            {
-                if ( pattern[0] == _T('.') )
-                {
-                    if ( *pszExt )
-                    {
-                        if ( ends_with(filePath, pattern) )
-                        {
-                            if ( lstrcmp(lang.cszLangName, _T("C")) == 0 || lstrcmp(lang.cszLangName, _T("C++")) == 0 )
-                            {
-                                return t_string(_T("C,C++"));
-                            }
-                            return t_string(lang.cszLangName);
-                        }
-                    }
-                }
-                else
-                {
-                    if ( lstrcmpi(pszFileName, pattern) == 0 )
-                    {
-                        return t_string(lang.cszLangName);
-                    }
-                }
-            }
-        }
-
-        return t_string();
-    }
 }
 
 const TCHAR* CTagsDlg::cszListViewColumnNames[LVC_TOTAL] = {
@@ -495,14 +249,6 @@ const TCHAR* CTagsDlg::cszListViewColumnNames[LVC_TOTAL] = {
     _T("Line"),
     _T("File")
 };
-
-/*static int CALLBACK ListViewCompareFunc(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
-{
-    return ::CompareString(
-        LOCALE_USER_DEFAULT, NORM_IGNORECASE,
-        (LPCTSTR) lParam1, -1,
-        (LPCTSTR) lParam2, -1 );
-}*/
 
 CTagsDlg::CTagsDlg() : CDialog(IDD_MAIN)
 , m_viewMode(TVM_NONE)
@@ -517,6 +263,7 @@ CTagsDlg::CTagsDlg() : CDialog(IDD_MAIN)
 , m_hBkgndBrush(NULL)
 , m_prevSelStart(-1)
 , m_isUpdatingSelToItem(false)
+, m_nThreadMsg(0)
 , m_nTagsThreadCount(0)
 {
     SetCTagsExePath();
@@ -676,6 +423,14 @@ INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch ( uMsg )
     {
+        case WM_CLEARCACHEDTAGS:
+            ClearCachedTags();
+            return 0;
+
+        case WM_PURIFYCACHEDTAGS:
+            PurifyCachedTags();
+            return 0;
+
         case WM_TAGDBLCLICKED:
             OnTagDblClicked( (const tTagData *) lParam );
             return 0;
@@ -755,24 +510,56 @@ void CTagsDlg::OnAddTags(const char* s, const tCTagsThreadParam* tt)
         nParseFlags |= CTagsResultParser::PF_ISUTF8;
     }
 
-    tags_map tags;
-    if ( !m_tags )
-        m_tags = &tags;
+    tags_map new_tags;
 
     CTagsResultParser::Parse(
         s,
         nParseFlags,
         CTagsResultParser::tParseContext(
-            *m_tags,
+            new_tags,
             getFileDirectory(tt->source_file_name),
             tt->temp_input_file.empty() ? t_string() : tt->source_file_name
         ) 
     );
 
-    if ( m_tags == &tags )
     {
-        m_cachedTags.emplace_back(std::move(tags));
+        CThreadLock lock(m_csTagsMap);
+
+        m_cachedTags.emplace_back(std::move(new_tags));
         m_tags = &m_cachedTags.back();
+
+        if ( m_opt.getBool(OPT_CTAGS_SCANFOLDER) && !m_tags->empty() )
+        {
+            std::list<std::list<tags_map>::iterator> tagsToRemove;
+
+            for ( auto itr = m_cachedTags.begin(); itr != m_cachedTags.end(); ++itr )
+            {
+                const tags_map& tags = *itr;
+                if ( m_tags == &tags )
+                    continue;
+
+                bool bAllFilesIncluded = true;
+                for ( const auto& fileItem : tags )
+                {
+                    if ( m_tags->find(fileItem.first) == m_tags->end() )
+                    {
+                        bAllFilesIncluded = false;
+                        break;
+                    }
+                }
+
+                if ( bAllFilesIncluded )
+                    tagsToRemove.push_back(itr);
+            }
+
+            if ( !tagsToRemove.empty() )
+            {
+                for ( auto& itr : tagsToRemove )
+                {
+                    m_cachedTags.erase(itr);
+                }
+            }
+        }
     }
 
     // let's update tags view in the primary thread
@@ -1196,8 +983,8 @@ bool CTagsDlg::GoToTag(const t_string& filePath, const TCHAR* cszTagName)  // no
 {
     if ( cszTagName && cszTagName[0] && m_tags && !m_tags->empty() )
     {
-        CTagsResultParser::file_tags& fileTags = (*m_tags)[filePath];
-        CTagsResultParser::file_tags::iterator itr = getTagByName(fileTags, cszTagName);
+        file_tags& fileTags = (*m_tags)[filePath];
+        file_tags::iterator itr = getTagByName(fileTags, cszTagName);
         if ( itr != fileTags.end() )
         {
         }
@@ -1216,7 +1003,12 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
     }
 
     tags_map* prev_tags = m_tags;
-    m_tags = getCachedTagsMap(cszFileName); // can be nullptr
+
+    {
+        CThreadLock lock(m_csTagsMap);
+
+        m_tags = getCachedTagsMap(cszFileName); // can be nullptr
+    }
 
     if ( m_tags && !bReparsePhysicalFile )
     {
@@ -1262,6 +1054,15 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
 
     if ( !addCTagsThreadForFile(cszFileName) )
         return;
+
+    if ( m_tags )
+    {
+        CThreadLock lock(m_csTagsMap);
+
+        auto itr = getCachedTagsMapItr(cszFileName);
+        m_cachedTags.erase(itr);
+        m_tags = nullptr;
+    }
 
     t_string ctagsOptPath = m_ctagsExeFilePath;
     if ( ctagsOptPath.length() > 3 )
@@ -1399,13 +1200,13 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
     HANDLE hThread = ::CreateThread(NULL, 0, CTagsThreadProc, tt, 0, &tt->dwThreadID);
     if ( hThread )
     {
+        ::InterlockedIncrement(&m_nTagsThreadCount);
+        m_dwLastTagsThreadID = tt->dwThreadID;
+        ::CloseHandle(hThread);
         if ( m_tbButtons.GetHwnd() )
         {
             m_tbButtons.DisableButton(IDM_PARSE);
         }
-        ::InterlockedIncrement(&m_nTagsThreadCount);
-        m_dwLastTagsThreadID = tt->dwThreadID;
-        ::CloseHandle(hThread);
     }
     else
     {
@@ -1432,10 +1233,7 @@ void CTagsDlg::SetSortMode(eTagsSortMode sortMode)
         m_opt.setInt( OPT_VIEW_SORT, (int) sortMode );
 
         m_prevSelStart = -1;
-
-        m_csTagsItems.Lock();
-            deleteAllItems(true);
-        m_csTagsItems.Release();
+        deleteAllItems(true);
 
         if ( m_viewMode == TVM_TREE )
         {
@@ -1546,8 +1344,8 @@ void CTagsDlg::UpdateCurrentItem()
                 return;
             }
 
-            CTagsResultParser::file_tags& fileTags = fileItr->second;
-            CTagsResultParser::file_tags::const_iterator itr = findTagByLine(fileTags, line);
+            file_tags& fileTags = fileItr->second;
+            file_tags::const_iterator itr = findTagByLine(fileTags, line);
             if ( itr == fileTags.end() )
             {
                 if ( itr != fileTags.begin() )
@@ -1573,13 +1371,13 @@ void CTagsDlg::UpdateCurrentItem()
                 HTREEITEM hItem = (HTREEITEM) (*itr)->data.p;
                 if ( hItem )
                 {
-                    m_csTagsItems.Lock();
+                    CThreadLock lock(m_csTagsItemsUI);
+
                     if ( m_tvTags.GetCount() > 0 )
                     {
                         m_tvTags.SelectItem(hItem);
                         m_tvTags.EnsureVisible(hItem);
                     }
-                    m_csTagsItems.Release();
                 }
             }
             else
@@ -1587,14 +1385,14 @@ void CTagsDlg::UpdateCurrentItem()
                 int iItem = (*itr)->data.i;
                 if ( iItem >= 0 )
                 {
-                    m_csTagsItems.Lock();
+                    CThreadLock lock(m_csTagsItemsUI);
+
                     if ( m_lvTags.GetItemCount() > 0 )
                     {
                         m_lvTags.SetItemState(iItem, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
                         m_lvTags.SetSelectionMark(iItem);
                         m_lvTags.EnsureVisible(iItem, FALSE);
                     }
-                    m_csTagsItems.Release();
                 }
             }
         }
@@ -1603,44 +1401,9 @@ void CTagsDlg::UpdateCurrentItem()
 
 void CTagsDlg::UpdateTagsView()
 {
-    if ( m_tags )
+    if ( m_tags && m_tags->empty() )
     {
-        if ( m_tags->empty() )
-        {
-            m_tags->insert( std::make_pair(m_pEdWr->ewGetFilePathName(), file_tags()) );
-        }
-        else if ( m_opt.getBool(OPT_CTAGS_SCANFOLDER) )
-        {
-            std::list<std::list<tags_map>::iterator> tagsToRemove;
-
-            for ( auto itr = m_cachedTags.begin(); itr != m_cachedTags.end(); ++itr )
-            {
-                const tags_map& tags = *itr;
-                if ( m_tags == &tags )
-                    continue;
-
-                bool bAllFilesIncluded = true;
-                for ( const auto& fileItem : tags )
-                {
-                    if ( m_tags->find(fileItem.first) == m_tags->end() )
-                    {
-                        bAllFilesIncluded = false;
-                        break;
-                    }
-                }
-
-                if ( bAllFilesIncluded )
-                    tagsToRemove.push_back(itr);
-            }
-
-            if ( !tagsToRemove.empty() )
-            {
-                for ( auto& itr : tagsToRemove )
-                {
-                    m_cachedTags.erase(itr);
-                }
-            }
-        }
+        m_tags->insert( std::make_pair(m_pEdWr->ewGetFilePathName(), file_tags()) );
     }
 
     m_prevSelStart = -1;
@@ -1678,6 +1441,8 @@ LPCTSTR CTagsDlg::GetEditorShortName() const
 
 void CTagsDlg::deleteAllItems(bool bDelayedRedraw)
 {
+    CThreadLock lock(m_csTagsItemsUI);
+
     if ( m_lvTags.IsWindow() )
     {
         if ( bDelayedRedraw )
@@ -1791,9 +1556,7 @@ void CTagsDlg::ApplyColors()
 
 void CTagsDlg::ClearItems(bool bDelayedRedraw )
 {
-    m_csTagsItems.Lock();
-        deleteAllItems(bDelayedRedraw);
-    m_csTagsItems.Release();
+    deleteAllItems(bDelayedRedraw);
 
     if ( m_tbButtons.IsWindow() )
     {
@@ -1806,37 +1569,66 @@ void CTagsDlg::ClearItems(bool bDelayedRedraw )
 
 void CTagsDlg::ClearCachedTags()
 {
-    m_cachedTags.clear();
-    m_tags = nullptr;
+    {
+        CThreadLock lock(m_csCTagsThreads);
+
+        if ( !m_ctagsThreads.empty() )
+        {
+            m_nThreadMsg = WM_CLEARCACHEDTAGS;
+            return;
+        }
+    }
+
+    if ( !GetHwnd() || !IsWindowVisible() )
+    {
+        CThreadLock lock(m_csTagsMap);
+
+        m_cachedTags.clear();
+        m_tags = nullptr;
+    }
 }
 
 void CTagsDlg::PurifyCachedTags()
 {
-    IEditorWrapper::file_set openedFiles = m_pEdWr->ewGetOpenedFilePaths();
-    std::list<std::list<tags_map>::const_iterator> itemsToDelete;
-
-    std::list<tags_map>::const_iterator itrEnd = m_cachedTags.end();
-    std::list<tags_map>::const_iterator itrTags = m_cachedTags.begin();
-    for ( ; itrTags != itrEnd; ++itrTags )
     {
-        const tags_map& tagsMap = *itrTags;
-        auto itrFile = std::find_if(tagsMap.begin(), tagsMap.end(),
-            [&openedFiles](const tags_map::value_type& fileItem){ return (openedFiles.find(fileItem.first) != openedFiles.end()); }
-        );
-        if ( itrFile == tagsMap.end() )
+        CThreadLock lock(m_csCTagsThreads);
+
+        if ( !m_ctagsThreads.empty() )
         {
-            itemsToDelete.push_back(itrTags);
+            m_nThreadMsg = WM_PURIFYCACHEDTAGS;
+            return;
         }
     }
 
-    for ( auto& itr : itemsToDelete )
-    {
-        m_cachedTags.erase(itr);
-    }
+    IEditorWrapper::file_set openedFiles = m_pEdWr->ewGetOpenedFilePaths();
+    std::list<std::list<tags_map>::const_iterator> itemsToDelete;
 
-    if ( m_cachedTags.empty() )
     {
-        m_tags = nullptr;
+        CThreadLock lock(m_csTagsMap);
+
+        std::list<tags_map>::const_iterator itrEnd = m_cachedTags.end();
+        std::list<tags_map>::const_iterator itrTags = m_cachedTags.begin();
+        for ( ; itrTags != itrEnd; ++itrTags )
+        {
+            const tags_map& tagsMap = *itrTags;
+            auto itrFile = std::find_if(tagsMap.begin(), tagsMap.end(),
+                [&openedFiles](const tags_map::value_type& fileItem){ return (openedFiles.find(fileItem.first) != openedFiles.end()); }
+            );
+            if ( itrFile == tagsMap.end() )
+            {
+                itemsToDelete.push_back(itrTags);
+            }
+        }
+
+        for ( auto& itr : itemsToDelete )
+        {
+            m_cachedTags.erase(itr);
+        }
+
+        if ( m_cachedTags.empty() )
+        {
+            m_tags = nullptr;
+        }
     }
 
     if ( openedFiles.empty() )
@@ -1968,9 +1760,9 @@ void CTagsDlg::checkCTagsExePath()
     }
 }
 
-CTagsResultParser::file_tags::iterator CTagsDlg::getTagByLine(CTagsResultParser::file_tags& fileTags, const int line)
+CTagsDlg::file_tags::iterator CTagsDlg::getTagByLine(file_tags& fileTags, const int line)
 {
-    CTagsResultParser::file_tags::iterator itr = std::upper_bound(
+    file_tags::iterator itr = std::upper_bound(
         fileTags.begin(),
         fileTags.end(),
         line,
@@ -2008,9 +1800,9 @@ CTagsResultParser::file_tags::iterator CTagsDlg::getTagByLine(CTagsResultParser:
     return itr;
 }
 
-CTagsResultParser::file_tags::iterator CTagsDlg::findTagByLine(CTagsResultParser::file_tags& fileTags, const int line)
+CTagsDlg::file_tags::iterator CTagsDlg::findTagByLine(file_tags& fileTags, const int line)
 {
-    CTagsResultParser::file_tags::iterator itr = getTagByLine(fileTags, line);
+    file_tags::iterator itr = getTagByLine(fileTags, line);
 
     if ( itr != fileTags.end() )
     {
@@ -2033,18 +1825,24 @@ CTagsResultParser::file_tags::iterator CTagsDlg::findTagByLine(CTagsResultParser
     return itr;
 }
 
-CTagsResultParser::file_tags::iterator CTagsDlg::getTagByName(CTagsResultParser::file_tags& fileTags, const t_string& tagName)
+CTagsDlg::file_tags::iterator CTagsDlg::getTagByName(file_tags& fileTags, const t_string& tagName)
 {
     return std::find_if(fileTags.begin(), fileTags.end(),
         [&tagName](const std::unique_ptr<tTagData>& tag){ return (tag->tagName == tagName); }
     );
 }
 
-CTagsResultParser::tags_map* CTagsDlg::getCachedTagsMap(const TCHAR* cszFileName)
+std::list<CTagsDlg::tags_map>::iterator CTagsDlg::getCachedTagsMapItr(const TCHAR* cszFileName)
 {
-    auto itrTags = std::find_if(m_cachedTags.begin(), m_cachedTags.end(),
+    return std::find_if(
+        m_cachedTags.begin(), m_cachedTags.end(),
         [&cszFileName](const tags_map& tagsMap){ return (tagsMap.find(cszFileName) != tagsMap.end()); }
     );
+}
+
+CTagsDlg::tags_map* CTagsDlg::getCachedTagsMap(const TCHAR* cszFileName)
+{
+    auto itrTags = getCachedTagsMapItr(cszFileName);
     return ( (itrTags != m_cachedTags.end()) ? &(*itrTags) : nullptr );
 }
 
@@ -2052,21 +1850,40 @@ bool CTagsDlg::addCTagsThreadForFile(const t_string& filePath)
 {
     bool bAdded = false;
 
-    m_csCTagsThreads.Lock();
+    CThreadLock lock(m_csCTagsThreads);
+
     if ( m_ctagsThreads.insert(filePath).second == true )
     {
         bAdded = true;
     }
-    m_csCTagsThreads.Release();
 
     return bAdded;
 }
 
 void CTagsDlg::removeCTagsThreadForFile(const t_string& filePath)
 {
-    m_csCTagsThreads.Lock();
-    m_ctagsThreads.erase(filePath);
-    m_csCTagsThreads.Release();
+    UINT uMsg = 0;
+
+    {
+        CThreadLock lock(m_csCTagsThreads);
+
+        m_ctagsThreads.erase(filePath);
+        if ( m_ctagsThreads.empty() && (m_nThreadMsg != 0) )
+        {
+            uMsg = m_nThreadMsg;
+            m_nThreadMsg = 0;
+        }
+    }
+
+    if ( uMsg != 0 )
+    {
+        ::PostMessage(GetHwnd(), uMsg, 0, 0);
+    }
+}
+
+bool CTagsDlg::hasAnyCTagsThread() const
+{
+    return (::InterlockedCompareExchange(&m_nTagsThreadCount, 0, 0) == 0);
 }
 
 void CTagsDlg::initOptions()
@@ -2088,8 +1905,9 @@ void CTagsDlg::initOptions()
     m_opt.AddInt( OPT_VIEW_WIDTH,             cszView,  _T("Width"),            220      );
     m_opt.AddInt( OPT_VIEW_NAMEWIDTH,         cszView,  _T("NameWidth"),        220      );
     m_opt.AddBool( OPT_VIEW_SHOWTOOLTIPS,     cszView,  _T("ShowTooltips"),     true     );
-    m_opt.AddBool( OPT_VIEW_ESCFOCUSTOEDITOR, cszView,  _T("EscFocusToEditor"), false    );
     m_opt.AddBool( OPT_VIEW_NESTEDSCOPETREE,  cszView,  _T("NestedScopeTree"),  true     );
+    m_opt.AddBool( OPT_VIEW_DBLCLICKTREE,     cszView,  _T("DblClickTree"),     true     );
+    m_opt.AddBool( OPT_VIEW_ESCFOCUSTOEDITOR, cszView,  _T("EscFocusToEditor"), false    );
 
     // Colors section
     m_opt.AddBool( OPT_COLORS_USEEDITORCOLORS,  cszColors, _T("UseEditorColors"), true );
@@ -2202,9 +2020,11 @@ void CTagsDlg::sortTagsByLineLV()
     int nItem = 0;
     for ( auto& fileItem : *m_tags )
     {
-        CTagsResultParser::file_tags& fileTags = fileItem.second;
+        file_tags& fileTags = fileItem.second;
         for ( std::unique_ptr<tTagData>& pTag : fileTags )
         {
+            pTag->data.i = -1;
+
             if ( m_tagFilter.empty() || isTagMatchFilter(pTag->getFullTagName()) )
             {
                 pTag->pFilePath = &fileItem.first;
@@ -2213,7 +2033,6 @@ void CTagsDlg::sortTagsByLineLV()
             else
             {
                 pTag->pFilePath = nullptr;
-                pTag->data.i = -1;
             }
         }
     }
@@ -2229,9 +2048,11 @@ void CTagsDlg::sortTagsByNameOrTypeLV(eTagsSortMode sortMode)
 
     for ( auto& fileItem : *m_tags )
     {
-        CTagsResultParser::file_tags& fileTags = fileItem.second;
+        file_tags& fileTags = fileItem.second;
         for ( std::unique_ptr<tTagData>& pTag : fileTags )
         {
+            pTag->data.i = -1;
+
             if ( m_tagFilter.empty() || isTagMatchFilter(pTag->getFullTagName()) )
             {
                 pTag->pFilePath = &fileItem.first;
@@ -2240,7 +2061,6 @@ void CTagsDlg::sortTagsByNameOrTypeLV(eTagsSortMode sortMode)
             else
             {
                 pTag->pFilePath = nullptr;
-                pTag->data.i = -1;
             }
         }
     }
@@ -2289,7 +2109,7 @@ void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
 
     for ( auto& fileItem : *m_tags )
     {
-        CTagsResultParser::file_tags& fileTags = fileItem.second;
+        file_tags& fileTags = fileItem.second;
 
         tTagsByFile tagsByFile;
         tagsByFile.filePath = fileItem.first;
@@ -2297,6 +2117,8 @@ void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
 
         for ( std::unique_ptr<tTagData>& pTag : fileTags )
         {
+            pTag->data.p = nullptr;
+
             if ( m_tagFilter.empty() || isTagMatchFilter(pTag->getFullTagName()) )
             {
                 pTag->pFilePath = &fileItem.first;
@@ -2305,7 +2127,6 @@ void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
             else
             {
                 pTag->pFilePath = nullptr;
-                pTag->data.p = nullptr;
             }
         }
 
@@ -2403,7 +2224,21 @@ void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
                 {
                     hScopeItem = scopeIt->second;
                     if ( tagScope.empty() )
-                        bAddItem = false;
+                    {
+                        tTagData* pScopeTag = (tTagData *) m_tvTags.GetItemData(hScopeItem);
+                        if ( !pScopeTag || pScopeTag->line != pTag->line )
+                        {
+                            if ( pTag->isTagTypeAllowingMultiScope() )
+                            {
+                                pTag->data.p = (void *) hScopeItem;
+                                bAddItem = false;
+                            }
+                            else
+                                hScopeItem = hFileItem;
+                        }
+                        else
+                            bAddItem = false;
+                    }
                 }
                 else
                 {
@@ -2464,6 +2299,28 @@ void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
                 {
                     HTREEITEM hItem = addTreeViewItem(hScopeItem, pTag->tagName, pTag);
                     pTag->data.p = (void *) hItem;
+                }
+                else
+                {
+                    tTagData* pScopeTag = (tTagData *) m_tvTags.GetItemData(hScopeItem);
+                    if ( !pScopeTag || pScopeTag->line != pTag->line )
+                    {
+                        if ( pTag->isTagTypeAllowingMultiScope() )
+                        {
+                            pTag->data.p = (void *) hScopeItem;
+                        }
+                        else
+                        {
+                            HTREEITEM hItem = addTreeViewItem(hFileItem, pTag->tagName, pTag);
+                            pTag->data.p = (void *) hItem;
+
+                            // a scope item has been added
+                            scopeMap[pTag->tagName] = hItem;
+
+                            if ( !m_tagFilter.empty() )
+                                setNodeItemExpanded(m_tvTags, hItem);
+                        }
+                    }
                 }
             }
             else

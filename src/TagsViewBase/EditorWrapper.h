@@ -13,8 +13,8 @@ class IEditorWrapper
 {
     public:
         typedef TagsCommon::t_string t_string;
-        typedef TagsCommon::string_cmp_less string_cmp_less;
-        typedef std::set<t_string, string_cmp_less> file_set;
+        typedef TagsCommon::tstring_cmp_less tstring_cmp_less;
+        typedef std::set<t_string, tstring_cmp_less> file_set;
 
         struct sEditorColors {
             COLORREF crTextColor;
@@ -74,9 +74,6 @@ class CEditorWrapper : public IEditorWrapper
     public:
         CEditorWrapper(CTagsDlg* pDlg);
         virtual ~CEditorWrapper();
-
-        // seems DoFunctions together with navMap must be located
-        // inside TagsDlg, not here !!!!!!!
 
         // can navigate backward in current file
         bool ewCanNavigateBackward();

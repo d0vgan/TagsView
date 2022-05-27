@@ -27,9 +27,9 @@ class CTagsResultParser
     public:
         typedef TagsCommon::t_string t_string;
         typedef TagsCommon::tTagData tTagData;
-        typedef TagsCommon::string_cmp_less string_cmp_less;
+        typedef TagsCommon::tstring_cmp_less tstring_cmp_less;
         typedef std::vector<std::unique_ptr<tTagData>> file_tags; // tags within a file
-        typedef std::map<t_string, file_tags, string_cmp_less> tags_map; // tags in multiple files
+        typedef std::map<t_string, file_tags, tstring_cmp_less> tags_map; // tags in multiple files
 
         enum eParseFlags {
             PF_ISUTF8 = 0x01
