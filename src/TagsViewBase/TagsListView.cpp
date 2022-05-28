@@ -72,13 +72,13 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                     if ( ScreenToClient(pt) )
                     {
                         UINT uFlags = 0;
-                        int nItem = HitTest(pt, &uFlags);
-                        if ( nItem != -1 )
+                        int iItem = HitTest(pt, &uFlags);
+                        if ( iItem != -1 )
                         {
                             LPNMTTDISPINFO lpnmdi = (LPNMTTDISPINFO) lParam;
                             SendMessage(lpnmdi->hdr.hwndFrom, TTM_SETMAXTIPWIDTH, 0, 600);
 
-                            const tTagData* pTagData = (const tTagData *) GetItemData(nItem);
+                            const tTagData* pTagData = (const tTagData *) GetItemData(iItem);
                             if ( pTagData )
                             {
                                 m_lastTooltipText = getTooltip(pTagData);
@@ -86,7 +86,7 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                             }
                             else
                             {
-                                m_lastTooltipText = GetItemText(nItem, 0);
+                                m_lastTooltipText = GetItemText(iItem, 0);
                                 lpnmdi->lpszText = const_cast<TCHAR*>(m_lastTooltipText.c_str());
                             }
 
@@ -117,13 +117,46 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 }
             }
         }
-        else if ( uMsg == WM_RBUTTONDOWN )
+        else if ( uMsg == WM_RBUTTONDOWN || uMsg == WM_CONTEXTMENU )
         {
+            int iSelItem = GetSelectionMark();
+            int iItem = iSelItem;
+
+            CPoint pt = Win32xx::GetCursorPos();
+            if ( uMsg == WM_RBUTTONDOWN )
+            {
+                CPoint ptClient = pt;
+                if ( ScreenToClient(ptClient) )
+                {
+                    UINT uFlags = 0;
+                    int iMouseItem = HitTest(ptClient, &uFlags);
+                    if ( iMouseItem != -1 )
+                    {
+                        iItem = iMouseItem;
+                        SetItemState(iSelItem, 0, LVIS_SELECTED);
+                        SetItemState(iItem, LVIS_SELECTED, LVIS_SELECTED);
+                        SetSelectionMark(iItem);
+
+                        CRect rc;
+                        GetItemRect(iItem, rc, LVIR_LABEL);
+                        ClientToScreen(rc);
+                        pt.y = rc.bottom;
+                    }
+                }
+            }
+            else
+            {
+                CRect rc;
+                GetItemRect(iSelItem, rc, LVIR_LABEL);
+
+                pt.x = rc.left;
+                pt.y = rc.bottom;
+                ClientToScreen(pt);
+            }
+
             HMENU hPopupMenu = ::GetSubMenu(m_pDlg->m_hMenu, 2);
             if ( hPopupMenu )
             {
-                POINT pt = { 0, 0 };
-                ::GetCursorPos(&pt);
                 ::TrackPopupMenuEx(hPopupMenu, 0, pt.x, pt.y, m_pDlg->GetHwnd(), NULL);
             }
             return 0;

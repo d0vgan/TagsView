@@ -225,6 +225,7 @@ class CTagsDlg : public CDialog
         void OnTreeCopyAllItemsToClipboard();
         void OnTreeExpandChildNodes();
         void OnTreeCollapseChildNodes();
+        void OnTreeCollapseParentNode();
         void OnTreeExpandAllNodes();
         void OnTreeCollapseAllNodes();
         void OnListCopyItemToClipboard();
@@ -269,6 +270,12 @@ class CTagsDlg : public CDialog
         t_string getItemTextTV(HTREEITEM hItem) const;
         t_string getItemAndChildrenTextTV(HTREEITEM hItem, const t_string& indent = t_string()) const;
         t_string getAllItemsTextTV() const;
+
+        enum eTreeNodeAction {
+            TNA_EXPANDCHILDREN,
+            TNA_COLLAPSECHILDREN
+        };
+        void applyActionToItemTV(HTREEITEM hItem, eTreeNodeAction action);
 
         void checkCTagsExePath();
 

@@ -118,10 +118,44 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             }
             */
         }
-        else if ( uMsg == WM_RBUTTONDOWN )
+        else if ( uMsg == WM_RBUTTONDOWN || uMsg == WM_CONTEXTMENU )
         {
             BOOL bItemHasChildren = FALSE;
-            HTREEITEM hItem = GetSelection();
+            HTREEITEM hSelItem = GetSelection();
+            HTREEITEM hItem = hSelItem;
+
+            CPoint pt = Win32xx::GetCursorPos();
+            if ( uMsg == WM_RBUTTONDOWN )
+            {
+                CPoint ptClient = pt;
+                if ( ScreenToClient(ptClient) )
+                {
+                    TVHITTESTINFO hitInfo = { 0 };
+
+                    hitInfo.pt = ptClient;
+                    HTREEITEM hMouseItem = HitTest(hitInfo);
+                    if ( hMouseItem )
+                    {
+                        hItem = hMouseItem;
+                        SelectItem(hItem);
+
+                        CRect rc;
+                        GetItemRect(hItem, rc, TRUE);
+                        ClientToScreen(rc);
+                        pt.y = rc.bottom;
+                    }
+                }
+            }
+            else
+            {
+                CRect rc;
+                GetItemRect(hSelItem, rc, TRUE);
+
+                pt.x = rc.left;
+                pt.y = rc.bottom;
+                ClientToScreen(pt);
+            }
+
             if ( hItem )
             {
                 bItemHasChildren = ItemHasChildren(hItem);
@@ -130,8 +164,6 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             HMENU hPopupMenu = ::GetSubMenu(m_pDlg->m_hMenu, bItemHasChildren ? 1 : 0);
             if ( hPopupMenu )
             {
-                POINT pt = { 0, 0 };
-                ::GetCursorPos(&pt);
                 ::TrackPopupMenuEx(hPopupMenu, 0, pt.x, pt.y, m_pDlg->GetHwnd(), NULL);
             }
             return 0;

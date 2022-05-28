@@ -614,20 +614,24 @@ BOOL CTagsDlg::OnCommand(WPARAM wParam, LPARAM lParam)
             OnTreeCopyAllItemsToClipboard();
             break;
 
-        case IDM_TREE_EXPANDCHILDNODES:
-            OnTreeExpandChildNodes();
-            break;
-
         case IDM_TREE_COLLAPSECHILDNODES:
             OnTreeCollapseChildNodes();
             break;
 
-        case IDM_TREE_EXPANDALLNODES:
-            OnTreeExpandAllNodes();
+        case IDM_TREE_EXPANDCHILDNODES:
+            OnTreeExpandChildNodes();
+            break;
+
+        case IDM_TREE_COLLAPSEPARENTNODE:
+            OnTreeCollapseParentNode();
             break;
 
         case IDM_TREE_COLLAPSEALLNODES:
             OnTreeCollapseAllNodes();
+            break;
+
+        case IDM_TREE_EXPANDALLNODES:
+            OnTreeExpandAllNodes();
             break;
 
         case IDM_LIST_COPYITEMTOCLIPBOARD:
@@ -1656,22 +1660,103 @@ void CTagsDlg::OnTreeCopyAllItemsToClipboard()
 
 void CTagsDlg::OnTreeExpandChildNodes()
 {
+    HTREEITEM hItem = m_tvTags.GetSelection();
+    if ( hItem )
+    {
+        m_tvTags.SetRedraw(FALSE);
 
+        applyActionToItemTV(hItem, TNA_EXPANDCHILDREN);
+
+        m_tvTags.SetRedraw(TRUE);
+        m_tvTags.InvalidateRect(TRUE);
+
+        m_tvTags.EnsureVisible(hItem);
+    }
 }
 
 void CTagsDlg::OnTreeCollapseChildNodes()
 {
+    HTREEITEM hItem = m_tvTags.GetSelection();
+    if ( hItem )
+    {
+        m_tvTags.SetRedraw(FALSE);
 
+        applyActionToItemTV(hItem, TNA_COLLAPSECHILDREN);
+
+        m_tvTags.SetRedraw(TRUE);
+        m_tvTags.InvalidateRect(TRUE);
+    }
+}
+
+void CTagsDlg::OnTreeCollapseParentNode()
+{
+    HTREEITEM hItem = m_tvTags.GetSelection();
+    if ( hItem )
+    {
+        HTREEITEM hParentItem = m_tvTags.GetParentItem(hItem);
+        if ( hParentItem )
+        {
+            m_tvTags.SetRedraw(FALSE);
+
+            m_tvTags.Expand(hParentItem, TVE_COLLAPSE);
+
+            m_tvTags.SetRedraw(TRUE);
+            m_tvTags.InvalidateRect(TRUE);
+
+            m_tvTags.SelectItem(hParentItem);
+            m_tvTags.EnsureVisible(hParentItem);
+        }
+    }
 }
 
 void CTagsDlg::OnTreeExpandAllNodes()
 {
+    HTREEITEM hItem = m_tvTags.GetRootItem();
+    if ( hItem )
+    {
+        m_tvTags.SetRedraw(FALSE);
 
+        do
+        {
+            applyActionToItemTV(hItem, TNA_EXPANDCHILDREN);
+            hItem = m_tvTags.GetNextSibling(hItem);
+        }
+        while ( hItem != NULL );
+
+        m_tvTags.SetRedraw(TRUE);
+        m_tvTags.InvalidateRect(TRUE);
+
+        hItem = m_tvTags.GetSelection();
+        if ( hItem )
+        {
+            m_tvTags.EnsureVisible(hItem);
+        }
+    }
 }
 
 void CTagsDlg::OnTreeCollapseAllNodes()
 {
+    HTREEITEM hItem = m_tvTags.GetRootItem();
+    if ( hItem )
+    {
+        m_tvTags.SetRedraw(FALSE);
 
+        do
+        {
+            applyActionToItemTV(hItem, TNA_COLLAPSECHILDREN);
+            hItem = m_tvTags.GetNextSibling(hItem);
+        }
+        while ( hItem != NULL );
+
+        m_tvTags.SetRedraw(TRUE);
+        m_tvTags.InvalidateRect(TRUE);
+
+        hItem = m_tvTags.GetSelection();
+        if ( hItem )
+        {
+            m_tvTags.EnsureVisible(hItem);
+        }
+    }
 }
 
 void CTagsDlg::OnListCopyItemToClipboard()
@@ -1779,7 +1864,7 @@ CTagsDlg::file_tags::iterator CTagsDlg::getTagByLine(file_tags& fileTags, const 
     {
         auto itr2 = itr;
 
-        itr = fileTags.end(); // will return end() if there is no itr2 does not succeed
+        itr = fileTags.end(); // will return end() if itr2 does not succeed
 
         for ( ; ; --itr2 )
         {
@@ -2461,4 +2546,19 @@ t_string CTagsDlg::getAllItemsTextTV() const
         return S;
     }
     return t_string();
+}
+
+void CTagsDlg::applyActionToItemTV(HTREEITEM hItem, eTreeNodeAction action)
+{
+    HTREEITEM hChildItem = m_tvTags.GetChild(hItem);
+    if ( hChildItem )
+    {
+        m_tvTags.Expand(hItem, (action == TNA_EXPANDCHILDREN) ? TVE_EXPAND : TVE_COLLAPSE);
+        do
+        {
+            applyActionToItemTV(hChildItem, action);
+            hChildItem = m_tvTags.GetNextSibling(hChildItem);
+        }
+        while ( hChildItem != NULL );
+    }
 }

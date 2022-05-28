@@ -60,10 +60,11 @@ IDR_TAGSVIEW_MENU MENU
         MENUITEM "Copy current item to Clipboard",                  IDM_TREE_COPYITEMTOCLIPBOARD
         MENUITEM "Copy all items to Clipboard",                     IDM_TREE_COPYALLITEMSTOCLIPBOARD
         MENUITEM ""                                                 -1
-        MENUITEM "Expand all nodes",                                IDM_TREE_EXPANDALLNODES
+        MENUITEM "Collapse parent node",                            IDM_TREE_COLLAPSEPARENTNODE
         MENUITEM "Collapse all nodes",                              IDM_TREE_COLLAPSEALLNODES
+        MENUITEM "Expand all nodes",                                IDM_TREE_EXPANDALLNODES
         MENUITEM ""                                                 -1
-        MENUITEM "Settings",                                        IDM_SETTINGS
+        MENUITEM "Settings...",                                     IDM_SETTINGS
     }
     POPUP "TreePopup2"
     {
@@ -71,19 +72,21 @@ IDR_TAGSVIEW_MENU MENU
         MENUITEM "Copy current item and its children to Clipboard", IDM_TREE_COPYITEMANDCHILDRENTOCLIPBOARD
         MENUITEM "Copy all items to Clipboard",                     IDM_TREE_COPYALLITEMSTOCLIPBOARD
         MENUITEM ""                                                 -1
-        MENUITEM "Expand child nodes",                              IDM_TREE_EXPANDCHILDNODES
         MENUITEM "Collapse child nodes",                            IDM_TREE_COLLAPSECHILDNODES
-        MENUITEM "Expand all nodes",                                IDM_TREE_EXPANDALLNODES
-        MENUITEM "Collapse all nodes",                              IDM_TREE_COLLAPSEALLNODES
+        MENUITEM "Expand child nodes",                              IDM_TREE_EXPANDCHILDNODES
         MENUITEM ""                                                 -1
-        MENUITEM "Settings",                                        IDM_SETTINGS
+        MENUITEM "Collapse parent node",                            IDM_TREE_COLLAPSEPARENTNODE
+        MENUITEM "Collapse all nodes",                              IDM_TREE_COLLAPSEALLNODES
+        MENUITEM "Expand all nodes",                                IDM_TREE_EXPANDALLNODES
+        MENUITEM ""                                                 -1
+        MENUITEM "Settings...",                                     IDM_SETTINGS
     }
     POPUP "ListPopup"
     {
         MENUITEM "Copy current item to Clipboard",                  IDM_LIST_COPYITEMTOCLIPBOARD
         MENUITEM "Copy all items to Clipboard",                     IDM_LIST_COPYALLITEMSTOCLIPBOARD
         MENUITEM ""                                                 -1
-        MENUITEM "Settings",                                        IDM_SETTINGS
+        MENUITEM "Settings...",                                     IDM_SETTINGS
     }
 }
 
