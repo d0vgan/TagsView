@@ -133,8 +133,8 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                     if ( iMouseItem != -1 )
                     {
                         iItem = iMouseItem;
-                        SetItemState(iSelItem, 0, LVIS_SELECTED);
-                        SetItemState(iItem, LVIS_SELECTED, LVIS_SELECTED);
+                        SetItemState(iSelItem, 0, LVIS_FOCUSED | LVIS_SELECTED);
+                        SetItemState(iItem, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
                         SetSelectionMark(iItem);
 
                         CRect rc;

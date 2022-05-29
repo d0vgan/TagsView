@@ -1393,6 +1393,11 @@ void CTagsDlg::UpdateCurrentItem()
 
                     if ( m_lvTags.GetItemCount() > 0 )
                     {
+                        int iSelItem = m_lvTags.GetSelectionMark();
+                        if ( iSelItem != -1 )
+                        {
+                            m_lvTags.SetItemState(iSelItem, 0, LVIS_FOCUSED | LVIS_SELECTED);
+                        }
                         m_lvTags.SetItemState(iItem, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
                         m_lvTags.SetSelectionMark(iItem);
                         m_lvTags.EnsureVisible(iItem, FALSE);
