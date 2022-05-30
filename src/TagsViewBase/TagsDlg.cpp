@@ -403,7 +403,7 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
         {
             DeleteTempFile(tt->temp_output_file);
         }
-        if ( pDlg && pDlg->m_tbButtons.GetHwnd() )
+        if ( pDlg && pDlg->m_tbButtons.IsWindow() )
         {
             pDlg->m_tbButtons.EnableButton(IDM_PARSE);
         }
@@ -983,13 +983,12 @@ void CTagsDlg::OnParseClicked()
     }
 }
 
-bool CTagsDlg::GoToTag(const t_string& filePath, const TCHAR* cszTagName)  // not implemented yet
+bool CTagsDlg::GoToTag(const t_string& filePath, const TCHAR* cszTagName, const TCHAR* cszTagScope)  // not implemented yet
 {
     if ( cszTagName && cszTagName[0] && m_tags && !m_tags->empty() )
     {
-        file_tags& fileTags = (*m_tags)[filePath];
-        file_tags::iterator itr = getTagByName(fileTags, cszTagName);
-        if ( itr != fileTags.end() )
+        tTagData* pTag = getTagByNameAndScope(filePath, cszTagName, cszTagScope);
+        if ( pTag )
         {
         }
     }
@@ -1207,7 +1206,7 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
         ::InterlockedIncrement(&m_nTagsThreadCount);
         m_dwLastTagsThreadID = tt->dwThreadID;
         ::CloseHandle(hThread);
-        if ( m_tbButtons.GetHwnd() )
+        if ( m_tbButtons.IsWindow() )
         {
             m_tbButtons.DisableButton(IDM_PARSE);
         }
@@ -1423,7 +1422,7 @@ void CTagsDlg::UpdateTagsView()
     m_sortMode = TSM_NONE;
     SetViewMode(viewMode, sortMode);
     UpdateNavigationButtons();
-    if ( m_tbButtons.GetHwnd() )
+    if ( m_tbButtons.IsWindow() )
     {
         m_tbButtons.EnableButton(IDM_PARSE);
     }
@@ -1433,7 +1432,7 @@ void CTagsDlg::UpdateNavigationButtons()
 {
     if ( m_pEdWr )
     {
-        if ( m_tbButtons.GetHwnd() )
+        if ( m_tbButtons.IsWindow() )
         {
             m_tbButtons.SetButtonState(IDM_PREVPOS,
               m_pEdWr->ewCanNavigateBackward() ? TBSTATE_ENABLED : 0);
@@ -1915,11 +1914,47 @@ CTagsDlg::file_tags::iterator CTagsDlg::findTagByLine(file_tags& fileTags, const
     return itr;
 }
 
-CTagsDlg::file_tags::iterator CTagsDlg::getTagByName(file_tags& fileTags, const t_string& tagName)
+std::vector<CTagsDlg::tags_map::iterator> CTagsDlg::getTagsMapItrsByFilePath(const t_string& filePath)
 {
-    return std::find_if(fileTags.begin(), fileTags.end(),
-        [&tagName](const std::unique_ptr<tTagData>& tag){ return (tag->tagName == tagName); }
-    );
+    if ( m_tags )
+    {
+        std::vector<tags_map::iterator> vTagsMapItr;
+        t_string filePathNoExt(filePath, 0, getFileExtPos(filePath));
+
+        for ( tags_map::iterator itr = m_tags->begin(); itr != m_tags->end(); ++itr )
+        {
+            t_string fpathNoExt(itr->first, 0, getFileExtPos(itr->first));
+            size_t n = (filePathNoExt.length() < fpathNoExt.length()) ? filePathNoExt.length() : fpathNoExt.length();
+            if ( _tcsnicmp(filePathNoExt.c_str(), fpathNoExt.c_str(), n) == 0 )
+            {
+                vTagsMapItr.push_back(itr);
+            }
+        }
+        return vTagsMapItr;
+    }
+    return std::vector<tags_map::iterator>();
+}
+
+CTagsDlg::tTagData* CTagsDlg::getTagByNameAndScope(const t_string& filePath, const t_string& tagName, const t_string& tagScope)
+{
+    if ( m_tags )
+    {
+        std::vector<tags_map::iterator> vTagsMapItr = getTagsMapItrsByFilePath(filePath);
+        for ( tags_map::iterator itrTagsMap : vTagsMapItr )
+        {
+            file_tags& fileTags = itrTagsMap->second;
+            auto itr = std::find_if(fileTags.begin(), fileTags.end(),
+                [&tagName, &tagScope](const std::unique_ptr<tTagData>& tag){ return (tag->tagName == tagName && tag->tagScope == tagScope); }
+            );
+            if ( itr != fileTags.end() )
+            {
+                tTagData* pTag = itr->get();
+                pTag->pFilePath = &itrTagsMap->first;
+                return pTag;
+            }
+        }
+    }
+    return nullptr;
 }
 
 std::list<CTagsDlg::tags_map>::iterator CTagsDlg::getCachedTagsMapItr(const TCHAR* cszFileName)
@@ -2270,21 +2305,21 @@ void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
 
     std::map<t_string, HTREEITEM> scopeMap;
 
+    t_string tagScopeName;
+    t_string scopeSep;
+    t_string langFamily = getCtagsLangFamily(tagsByFile.filePath);
+    if ( langFamily.find(_T("C++")) != t_string::npos )
+    {
+        scopeSep = _T("::");  // nested scopes in a form of "X::Y::Z"
+    }
+    else
+    {
+        scopeSep = _T(".");  // nested scopes in a form of "X.Y.Z"
+    }
+
     if ( m_opt.getBool(OPT_VIEW_NESTEDSCOPETREE) )
     {
-        t_string scopeSep;
-        t_string langFamily = getCtagsLangFamily(tagsByFile.filePath);
-        if ( langFamily.find(_T("C++")) != t_string::npos )
-        {
-            scopeSep = _T("::");  // nested scopes in a form of "X::Y::Z"
-        }
-        else
-        {
-            scopeSep = _T(".");  // nested scopes in a form of "X.Y.Z"
-        }
-
         t_string tagScope;
-        t_string tagScopeName;
 
         for ( tTagData* pTag : tagsByFile.fileTags )
         {
@@ -2337,7 +2372,8 @@ void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
                         // adding a scope item
                         t_string::size_type nPos = scopeSep.empty() ? t_string::npos : tagScope.rfind(scopeSep);
                         tagScopeName = (nPos == t_string::npos) ? tagScope : tagScope.substr(nPos + scopeSep.length());
-                        hScopeItem = addTreeViewItem(hScopeItem, tagScopeName, nullptr);
+                        tTagData* pScopeTag = getTagByNameAndScope(tagsByFile.filePath, tagScopeName, (nPos == t_string::npos) ? t_string() : tagScope.substr(0, nPos));
+                        hScopeItem = addTreeViewItem(hScopeItem, tagScopeName, pScopeTag);
                         scopeMap[tagScope] = hScopeItem;
 
                         if ( !m_tagFilter.empty() )
@@ -2420,7 +2456,10 @@ void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
                 if ( !pTag->tagScope.empty() )
                 {
                     // adding a scope item
-                    hScopeItem = addTreeViewItem(hFileItem, pTag->tagScope, nullptr);
+                    t_string::size_type nPos = scopeSep.empty() ? t_string::npos : pTag->tagScope.rfind(scopeSep);
+                    tagScopeName = (nPos == t_string::npos) ? pTag->tagScope : pTag->tagScope.substr(nPos + scopeSep.length());
+                    tTagData* pScopeTag = getTagByNameAndScope(tagsByFile.filePath, tagScopeName, (nPos == t_string::npos) ? t_string() : pTag->tagScope.substr(0, nPos));
+                    hScopeItem = addTreeViewItem(hFileItem, pTag->tagScope, pScopeTag);
                     scopeMap[pTag->tagScope] = hScopeItem;
 
                     if ( !m_tagFilter.empty() )

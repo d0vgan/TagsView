@@ -140,7 +140,7 @@ class CTagsDlg : public CDialog
 
         const eTagsSortMode GetSortMode() const { return m_sortMode; }
         const eTagsViewMode GetViewMode() const { return m_viewMode; }
-        bool  GoToTag(const t_string& filePath, const TCHAR* cszTagName); // not implemented yet
+        bool  GoToTag(const t_string& filePath, const TCHAR* cszTagName, const TCHAR* cszTagScope); // not implemented yet
         void  ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFile);
         void  ReparseCurrentFile();
         void  SetSortMode(eTagsSortMode sortMode);
@@ -281,7 +281,8 @@ class CTagsDlg : public CDialog
 
         file_tags::iterator getTagByLine(file_tags& fileTags, const int line);
         file_tags::iterator findTagByLine(file_tags& fileTags, const int line);
-        file_tags::iterator getTagByName(file_tags& fileTags, const t_string& tagName);
+        std::vector<tags_map::iterator> getTagsMapItrsByFilePath(const t_string& filePath);
+        tTagData* getTagByNameAndScope(const t_string& filePath, const t_string& tagName, const t_string& tagScope);
         std::list<tags_map>::iterator getCachedTagsMapItr(const TCHAR* cszFileName); // call it under m_csTagsMap!
         tags_map* getCachedTagsMap(const TCHAR* cszFileName); // call it under m_csTagsMap!
 

@@ -77,6 +77,17 @@ namespace TagsCommon
         return _T("");
     }
 
+    size_t getFileExtPos(const t_string& filePathName)
+    {
+        size_t n = filePathName.find_last_of(_T(".\\/"));
+        if ( n != t_string::npos )
+        {
+            if ( filePathName[n] == _T('.') )
+                return n;
+        }
+        return filePathName.length();
+    }
+
     t_string getFileDirectory(const t_string& filePathName)
     {
         t_string::size_type n = filePathName.find_last_of(_T("\\/"));

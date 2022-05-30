@@ -73,6 +73,7 @@ namespace TagsCommon
     LPCTSTR  getFileName(const t_string& filePathName);
     LPCTSTR  getFileName(const tTagData* pTag);
     LPCTSTR  getFileExt(LPCTSTR pszFilePathName);
+    size_t   getFileExtPos(const t_string& filePathName);
     t_string getFileDirectory(const t_string& filePathName);
     bool     setClipboardText(const t_string& text, HWND hWndOwner);
     t_string getCtagsLangFamily(const t_string& filePath);
