@@ -8,6 +8,7 @@
 + context (popup) menu
 + ability to scan all files in a folder
 + using in-memory "cache" of tags to invoke ctags only when necessary
++ transparent icon (thanks to AlexeyB)
 + win32++ updated to 8.9.1+
 + uses the latest ctags from https://github.com/universal-ctags/ctags-win32
 + a lot of internal improvements
