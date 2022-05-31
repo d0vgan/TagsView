@@ -1,5 +1,5 @@
+#include "TagsDlgData.h"
 #include "SettingsDlg.h"
-#include "TagsDlg.h"
 #include "resource.h"
 
 namespace
@@ -12,15 +12,15 @@ namespace
 
     const sCheckBoxOption arrCheckOptions[] = 
     {
-        { IDC_CH_OPT_PARSEONSAVE,           CTagsDlg::OPT_BEHAVIOR_PARSEONSAVE },
-        { IDC_CH_OPT_EDITORCOLORS,          CTagsDlg::OPT_COLORS_USEEDITORCOLORS },
-        { IDC_CH_OPT_SHOWTOOLTIPS,          CTagsDlg::OPT_VIEW_SHOWTOOLTIPS },
-        { IDC_CH_OPT_NESTEDSCOPETREE,       CTagsDlg::OPT_VIEW_NESTEDSCOPETREE },
-        { IDC_CH_OPT_DBLCLICKTREE,          CTagsDlg::OPT_VIEW_DBLCLICKTREE },
-        { IDC_CH_OPT_ESCFOCUSTOEDITOR,      CTagsDlg::OPT_VIEW_ESCFOCUSTOEDITOR },
-        { IDC_CH_OPT_CTAGSSTDOUT,           CTagsDlg::OPT_CTAGS_OUTPUTSTDOUT },
-        { IDC_CH_OPT_SCANFOLDER,            CTagsDlg::OPT_CTAGS_SCANFOLDER },
-        { IDC_CH_OPT_SCANFOLDERRECURSIVELY, CTagsDlg::OPT_CTAGS_SCANFOLDERRECURSIVELY },
+        { IDC_CH_OPT_PARSEONSAVE,           CTagsDlgData::OPT_BEHAVIOR_PARSEONSAVE },
+        { IDC_CH_OPT_EDITORCOLORS,          CTagsDlgData::OPT_COLORS_USEEDITORCOLORS },
+        { IDC_CH_OPT_SHOWTOOLTIPS,          CTagsDlgData::OPT_VIEW_SHOWTOOLTIPS },
+        { IDC_CH_OPT_NESTEDSCOPETREE,       CTagsDlgData::OPT_VIEW_NESTEDSCOPETREE },
+        { IDC_CH_OPT_DBLCLICKTREE,          CTagsDlgData::OPT_VIEW_DBLCLICKTREE },
+        { IDC_CH_OPT_ESCFOCUSTOEDITOR,      CTagsDlgData::OPT_VIEW_ESCFOCUSTOEDITOR },
+        { IDC_CH_OPT_CTAGSSTDOUT,           CTagsDlgData::OPT_CTAGS_OUTPUTSTDOUT },
+        { IDC_CH_OPT_SCANFOLDER,            CTagsDlgData::OPT_CTAGS_SCANFOLDER },
+        { IDC_CH_OPT_SCANFOLDERRECURSIVELY, CTagsDlgData::OPT_CTAGS_SCANFOLDERRECURSIVELY },
     };
 }
 

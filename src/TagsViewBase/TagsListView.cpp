@@ -66,7 +66,7 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             if ( ((LPNMHDR) lParam)->code == TTN_GETDISPINFO )
             {
-                if ( m_pDlg->GetOptions().getBool(CTagsDlg::OPT_VIEW_SHOWTOOLTIPS) )
+                if ( m_pDlg->GetOptions().getBool(CTagsDlgData::OPT_VIEW_SHOWTOOLTIPS) )
                 {
                     CPoint pt = Win32xx::GetCursorPos();
                     if ( ScreenToClient(pt) )

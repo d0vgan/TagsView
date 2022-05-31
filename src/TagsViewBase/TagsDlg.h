@@ -9,8 +9,7 @@
 #include <vector>
 #include <map>
 #include <set>
-#include <list>
-#include "OptionsManager.h"
+#include "TagsDlgData.h"
 #include "TagsCommon.h"
 #include "CTagsResultParser.h"
 #include "TagsFilterEdit.h"
@@ -30,20 +29,6 @@ class CTagsDlg : public CDialog
     public:
         enum eConsts {
             MAX_TAGNAME = 200
-        };
-
-        enum eTagsViewMode {
-            TVM_NONE = 0,
-            TVM_LIST,
-            TVM_TREE
-        };
-
-        enum eTagsSortMode {
-            TSM_NONE = 0,
-            TSM_NAME,
-            TSM_TYPE,
-            TSM_LINE,
-            TSM_FILE
         };
 
         enum eListViewColumns {
@@ -69,42 +54,6 @@ class CTagsDlg : public CDialog
             WM_FILECLOSED       = (WM_USER + 7070),
             WM_CLEARCACHEDTAGS  = (WM_USER + 7101),
             WM_PURIFYCACHEDTAGS = (WM_USER + 7102)
-        };
-
-        enum eDeleteTempFile {
-            DTF_NEVERDELETE  = 0,  // don't delete (for debug purpose)
-            DTF_ALWAYSDELETE = 1,  // delete once no more needed
-            DTF_PRESERVELAST = 2   // preserve the last temp file until the next Parse() or exiting
-        };
-
-        enum eOptions {
-            OPT_VIEW_MODE = 0,
-            OPT_VIEW_SORT,
-            OPT_VIEW_WIDTH,
-            OPT_VIEW_NAMEWIDTH,
-            OPT_VIEW_SHOWTOOLTIPS,
-            OPT_VIEW_NESTEDSCOPETREE,
-            OPT_VIEW_DBLCLICKTREE,
-            OPT_VIEW_ESCFOCUSTOEDITOR,
-
-            OPT_COLORS_USEEDITORCOLORS,
-            //OPT_COLORS_BKGND,
-            //OPT_COLORS_TEXT,
-            //OPT_COLORS_TEXTSEL,
-            //OPT_COLORS_SELA,
-            //OPT_COLORS_SELN,
-
-            OPT_BEHAVIOR_PARSEONSAVE,
-
-            OPT_CTAGS_OUTPUTSTDOUT,
-            OPT_CTAGS_SCANFOLDER,
-            OPT_CTAGS_SCANFOLDERRECURSIVELY,
-            OPT_CTAGS_SKIPFILEEXTS,
-
-            OPT_DEBUG_DELETETEMPINPUTFILE,
-            OPT_DEBUG_DELETETEMPOUTPUTFILE,
-
-            OPT_COUNT
         };
 
         typedef TagsCommon::t_string t_string;
@@ -138,13 +87,13 @@ class CTagsDlg : public CDialog
 
         static void DeleteTempFile(const t_string& filePath);
 
-        const eTagsSortMode GetSortMode() const { return m_sortMode; }
-        const eTagsViewMode GetViewMode() const { return m_viewMode; }
+        const CTagsDlgData::eTagsSortMode GetSortMode() const { return m_sortMode; }
+        const CTagsDlgData::eTagsViewMode GetViewMode() const { return m_viewMode; }
         bool  GoToTag(const t_string& filePath, const TCHAR* cszTagName, const TCHAR* cszTagScope); // not implemented yet
         void  ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFile);
         void  ReparseCurrentFile();
-        void  SetSortMode(eTagsSortMode sortMode);
-        void  SetViewMode(eTagsViewMode viewMode, eTagsSortMode sortMode);
+        void  SetSortMode(CTagsDlgData::eTagsSortMode sortMode);
+        void  SetViewMode(CTagsDlgData::eTagsViewMode viewMode, CTagsDlgData::eTagsSortMode sortMode);
         void  UpdateTagsView();
         void  UpdateCurrentItem(); // set current item according to caret pos
         void  UpdateNavigationButtons();
@@ -156,13 +105,15 @@ class CTagsDlg : public CDialog
         }
 
         // MUST be called manually to read the options
-        void  ReadOptions()  { initOptions(); m_opt.ReadOptions(m_optRdWr); }
+        void  ReadOptions(COptionsReaderWriter* optRdWr)
+        {
+            initOptions();
+            m_Data.SetOptionsReaderWriter(optRdWr);
+            m_Data.ReadOptions();
+        }
 
         // MUST be called manually to save the options
-        void  SaveOptions()  { m_opt.SaveOptions(m_optRdWr); }
-
-        // MUST be called manually to set required options reader-writer
-        void  SetOptionsReaderWriter(COptionsReaderWriter* optRdWr) { m_optRdWr = optRdWr; }
+        void  SaveOptions()  { m_Data.SaveOptions(); }
 
         // MUST be called manually to set required editor wrapper
         void  SetEditorWrapper(CEditorWrapper* pEdWr) { m_pEdWr = pEdWr; }
@@ -191,29 +142,31 @@ class CTagsDlg : public CDialog
             }
         }
 
-        static eTagsViewMode toViewMode(int viewMode)
+        static CTagsDlgData::eTagsViewMode toViewMode(int viewMode)
         {
             switch ( viewMode )
             {
-                case TVM_TREE:
-                    return TVM_TREE;
+                case CTagsDlgData::TVM_TREE:
+                    return CTagsDlgData::TVM_TREE;
             }
-            return TVM_LIST;
+            return CTagsDlgData::TVM_LIST;
         }
 
-        static eTagsSortMode toSortMode(int sortMode)
+        static CTagsDlgData::eTagsSortMode toSortMode(int sortMode)
         {
             switch ( sortMode )
             {
-                case TSM_NAME:
-                    return TSM_NAME;
-                case TSM_TYPE:
-                    return TSM_TYPE;
+                case CTagsDlgData::TSM_NAME:
+                    return CTagsDlgData::TSM_NAME;
+                case CTagsDlgData::TSM_TYPE:
+                    return CTagsDlgData::TSM_TYPE;
+                case CTagsDlgData::TSM_FILE:
+                    return CTagsDlgData::TSM_FILE;
             }
-            return TSM_LINE;
+            return CTagsDlgData::TSM_LINE;
         }
 
-        COptionsManager& GetOptions() { return m_opt; }
+        COptionsManager& GetOptions() { return m_Data.GetOptions(); }
 
         void ApplyColors();
         void ClearItems(bool bDelayedRedraw = false);
@@ -255,6 +208,8 @@ class CTagsDlg : public CDialog
         void createTooltips();
         void destroyTooltips();
 
+        virtual void initOptions()  { m_Data.InitOptions(); }
+
         void deleteAllItems(bool bDelayedRedraw);
         int addListViewItem(int nItem, const tTagData* pTag);
         HTREEITEM addTreeViewItem(HTREEITEM hParent, const t_string& tagName, tTagData* pTag);
@@ -262,8 +217,8 @@ class CTagsDlg : public CDialog
         size_t getNumTotalItemsForSorting() const;
         size_t getNumItemsForSorting(const CTagsDlg::file_tags& fileTags) const;
         void sortTagsByLineLV();
-        void sortTagsByNameOrTypeLV(eTagsSortMode sortMode);
-        void sortTagsTV(eTagsSortMode sortMode);
+        void sortTagsByNameOrTypeLV(CTagsDlgData::eTagsSortMode sortMode);
+        void sortTagsTV(CTagsDlgData::eTagsSortMode sortMode);
         void addFileTagsToTV(tTagsByFile& tagsByFile);
         t_string getItemTextLV(int iItem) const;
         t_string getAllItemsTextLV() const;
@@ -279,18 +234,9 @@ class CTagsDlg : public CDialog
 
         void checkCTagsExePath();
 
-        file_tags::iterator getTagByLine(file_tags& fileTags, const int line);
-        file_tags::iterator findTagByLine(file_tags& fileTags, const int line);
-        std::vector<tags_map::iterator> getTagsMapItrsByFilePath(const t_string& filePath);
-        tTagData* getTagByNameAndScope(const t_string& filePath, const t_string& tagName, const t_string& tagScope);
-        std::list<tags_map>::iterator getCachedTagsMapItr(const TCHAR* cszFileName); // call it under m_csTagsMap!
-        tags_map* getCachedTagsMap(const TCHAR* cszFileName); // call it under m_csTagsMap!
-
         bool addCTagsThreadForFile(const t_string& filePath);
         void removeCTagsThreadForFile(const t_string& filePath);
         bool hasAnyCTagsThread() const;
-
-        virtual void initOptions();
 
         static DWORD WINAPI CTagsThreadProc(LPVOID lpParam);
 
@@ -299,13 +245,12 @@ class CTagsDlg : public CDialog
         friend class CTagsListView;
         friend class CTagsTreeView;
 
-        eTagsViewMode   m_viewMode;
-        eTagsSortMode   m_sortMode;
+        CTagsDlgData::eTagsViewMode   m_viewMode;
+        CTagsDlgData::eTagsSortMode   m_sortMode;
         DWORD           m_dwLastTagsThreadID;
         HANDLE          m_hTagsThreadEvent;
         CCriticalSection m_csTagsItemsUI;
         CCriticalSection m_csCTagsThreads;
-        CCriticalSection m_csTagsMap;
         CImageList      m_tbImageList;
         CToolBar        m_tbButtons;
         CTagsFilterEdit m_edFilter;
@@ -316,10 +261,7 @@ class CTagsDlg : public CDialog
         t_string        m_ctagsExeFilePath;
         t_string        m_ctagsTempInputFilePath;
         t_string        m_ctagsTempOutputFilePath;
-        tags_map*       m_tags;
-        std::list<tags_map> m_cachedTags; // access it under m_csTagsMap!
-        COptionsManager m_opt;
-        COptionsReaderWriter* m_optRdWr;
+        CTagsDlgData    m_Data;
         CEditorWrapper* m_pEdWr;
         HMENU           m_hMenu;
         COLORREF        m_crTextColor;

@@ -249,7 +249,7 @@ void CEditorWrapper::ewOnFileSaved()
     const t_string filePathName = ewGetFilePathName();
     if ( filePathName == getCurrentFilePathName() )
     {
-        if ( m_pDlg->GetOptions().getBool(CTagsDlg::OPT_BEHAVIOR_PARSEONSAVE) )
+        if ( m_pDlg->GetOptions().getBool(CTagsDlgData::OPT_BEHAVIOR_PARSEONSAVE) )
         {
             clearNavItem(filePathName, false);
             ewDoParseFile(true);

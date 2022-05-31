@@ -32,7 +32,7 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                     m_pDlg->PostMessage(CTagsDlg::WM_TAGDBLCLICKED, 0, (LPARAM) pTagData);
                 }
 
-                if ( (uMsg != WM_LBUTTONDBLCLK) || !m_pDlg->GetOptions().getBool(CTagsDlg::OPT_VIEW_DBLCLICKTREE) )
+                if ( (uMsg != WM_LBUTTONDBLCLK) || !m_pDlg->GetOptions().getBool(CTagsDlgData::OPT_VIEW_DBLCLICKTREE) )
                     return 0;
             }
         }
@@ -55,7 +55,7 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             if ( ((LPNMHDR) lParam)->code == TTN_GETDISPINFO )
             {
-                if ( m_pDlg->GetOptions().getBool(CTagsDlg::OPT_VIEW_SHOWTOOLTIPS) )
+                if ( m_pDlg->GetOptions().getBool(CTagsDlgData::OPT_VIEW_SHOWTOOLTIPS) )
                 {
                     CPoint pt = Win32xx::GetCursorPos();
                     if ( ScreenToClient(pt) )

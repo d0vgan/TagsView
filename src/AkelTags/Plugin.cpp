@@ -265,7 +265,7 @@ bool CAkelOptionsReaderWriter::writeStrOption(COptionsManager::const_opt_itr itr
 
 void CAkelTagsDlg::initOptions()
 {
-    if ( m_opt.HasOptions() )
+    if ( GetOptions().HasOptions() )
         return;
 
     // calling base initOptions()
@@ -273,7 +273,7 @@ void CAkelTagsDlg::initOptions()
 
     const TCHAR cszView[]  = _T("View");
 
-    m_opt.AddData( OPT_DOCKRECT,     cszView,  _T("DockRect"), NULL,  0 );
+    GetOptions().AddData( OPT_DOCKRECT,     cszView,  _T("DockRect"), NULL,  0 );
 }
 
 // CTagsViewPlugin class
@@ -623,8 +623,7 @@ void CTagsViewPlugin::Initialize(PLUGINDATA* pd)
     }
 
     m_optRdWr.SetMainWnd(m_hMainWnd);
-    m_tagsDlg.SetOptionsReaderWriter(&m_optRdWr);
-    m_tagsDlg.ReadOptions();
+    m_tagsDlg.ReadOptions(&m_optRdWr);
 
     if ( !m_pDockData )
     {

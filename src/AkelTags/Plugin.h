@@ -42,11 +42,11 @@ class CAkelTagsDlg : public CTagsDlg
 {
     public:
         enum eOptions2 {
-            OPT_DOCKRECT = OPT_COUNT
+            OPT_DOCKRECT = CTagsDlgData::OPT_COUNT
         };
 
     protected:
-        virtual void initOptions();
+        virtual void initOptions() override;
 };
 
 class CTagsViewPlugin : public CWinApp, public CEditorWrapper

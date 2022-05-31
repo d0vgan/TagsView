@@ -45,6 +45,9 @@
     <ClCompile Include="src\TagsViewBase\TagsDlgChild.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\TagsViewBase\TagsDlgData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\TagsViewBase\TagsFilterEdit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -93,6 +96,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\TagsViewBase\TagsDlgChild.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\TagsViewBase\TagsDlgData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\TagsViewBase\TagsFilterEdit.h">

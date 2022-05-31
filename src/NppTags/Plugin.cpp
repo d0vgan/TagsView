@@ -258,8 +258,7 @@ void CTagsViewPlugin::InitOptions()
         m_optRdWr.SetIniFilePathName(szConfigPath);
     }
 
-    m_tagsDlg.SetOptionsReaderWriter(&m_optRdWr);
-    m_tagsDlg.ReadOptions();
+    m_tagsDlg.ReadOptions(&m_optRdWr);
 
     m_isOptionsInited = true;
 }

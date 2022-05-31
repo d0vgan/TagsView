@@ -225,7 +225,7 @@ namespace
                 ::CloseHandle(hFile);
         }
 
-        if ( !tt->pDlg->GetOptions().getBool(CTagsDlg::OPT_CTAGS_OUTPUTSTDOUT) )
+        if ( !tt->pDlg->GetOptions().getBool(CTagsDlgData::OPT_CTAGS_OUTPUTSTDOUT) )
         {
             getTempPath(szTempPath);
             getUniqueId(szUniqueId);
@@ -251,11 +251,9 @@ const TCHAR* CTagsDlg::cszListViewColumnNames[LVC_TOTAL] = {
 };
 
 CTagsDlg::CTagsDlg() : CDialog(IDD_MAIN)
-, m_viewMode(TVM_NONE)
-, m_sortMode(TSM_NONE)
+, m_viewMode(CTagsDlgData::TVM_NONE)
+, m_sortMode(CTagsDlgData::TSM_NONE)
 , m_dwLastTagsThreadID(0)
-, m_tags(nullptr)
-, m_optRdWr(NULL)
 , m_pEdWr(NULL)
 , m_hMenu(NULL)
 , m_crTextColor(0xFFFFFFFF)
@@ -292,11 +290,11 @@ CTagsDlg::~CTagsDlg()
         ::DestroyMenu(m_hMenu);
     }
 
-    if ( m_opt.getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
+    if ( GetOptions().getInt(CTagsDlgData::OPT_DEBUG_DELETETEMPINPUTFILE) != CTagsDlgData::DTF_NEVERDELETE )
     {
         DeleteTempFile(m_ctagsTempInputFilePath);
     }
-    if ( m_opt.getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
+    if ( GetOptions().getInt(CTagsDlgData::OPT_DEBUG_DELETETEMPOUTPUTFILE) != CTagsDlgData::DTF_NEVERDELETE )
     {
         DeleteTempFile(m_ctagsTempOutputFilePath);
     }
@@ -358,11 +356,11 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
         }
 
         COptionsManager& opt = pDlg->GetOptions();
-        if ( opt.getInt(CTagsDlg::OPT_DEBUG_DELETETEMPINPUTFILE) == CTagsDlg::DTF_ALWAYSDELETE )
+        if ( opt.getInt(CTagsDlgData::OPT_DEBUG_DELETETEMPINPUTFILE) == CTagsDlgData::DTF_ALWAYSDELETE )
         {
             DeleteTempFile(tt->temp_input_file);
         }
-        if ( opt.getInt(CTagsDlg::OPT_DEBUG_DELETETEMPOUTPUTFILE) == CTagsDlg::DTF_ALWAYSDELETE )
+        if ( opt.getInt(CTagsDlgData::OPT_DEBUG_DELETETEMPOUTPUTFILE) == CTagsDlgData::DTF_ALWAYSDELETE )
         {
             DeleteTempFile(tt->temp_output_file);
         }
@@ -387,11 +385,11 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
     }
     else
     {
-        if ( !pDlg || pDlg->GetOptions().getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
+        if ( !pDlg || pDlg->GetOptions().getInt(CTagsDlgData::OPT_DEBUG_DELETETEMPINPUTFILE) != CTagsDlgData::DTF_NEVERDELETE )
         {
             DeleteTempFile(tt->temp_input_file);
         }
-        if ( !pDlg || pDlg->GetOptions().getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
+        if ( !pDlg || pDlg->GetOptions().getInt(CTagsDlgData::OPT_DEBUG_DELETETEMPOUTPUTFILE) != CTagsDlgData::DTF_NEVERDELETE )
         {
             DeleteTempFile(tt->temp_output_file);
         }
@@ -399,7 +397,7 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
 
     if ( !bTagsAdded )
     {
-        if ( !pDlg || pDlg->GetOptions().getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
+        if ( !pDlg || pDlg->GetOptions().getInt(CTagsDlgData::OPT_DEBUG_DELETETEMPOUTPUTFILE) != CTagsDlgData::DTF_NEVERDELETE )
         {
             DeleteTempFile(tt->temp_output_file);
         }
@@ -444,11 +442,11 @@ INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             return 0;
 
         case WM_CLOSETAGSVIEW:
-            if ( m_opt.getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
+            if ( GetOptions().getInt(CTagsDlgData::OPT_DEBUG_DELETETEMPINPUTFILE) != CTagsDlgData::DTF_NEVERDELETE )
             {
                 DeleteTempFile(m_ctagsTempInputFilePath);
             }
-            if ( m_opt.getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
+            if ( GetOptions().getInt(CTagsDlgData::OPT_DEBUG_DELETETEMPOUTPUTFILE) != CTagsDlgData::DTF_NEVERDELETE )
             {
                 DeleteTempFile(m_ctagsTempOutputFilePath);
             }
@@ -475,7 +473,7 @@ INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             return 0;
 
         case WM_CTLCOLOREDIT:
-            if ( GetOptions().getBool(OPT_COLORS_USEEDITORCOLORS) )
+            if ( GetOptions().getBool(CTagsDlgData::OPT_COLORS_USEEDITORCOLORS) )
             {
                 return OnCtlColorEdit(wParam, lParam);
             }
@@ -510,57 +508,19 @@ void CTagsDlg::OnAddTags(const char* s, const tCTagsThreadParam* tt)
         nParseFlags |= CTagsResultParser::PF_ISUTF8;
     }
 
-    tags_map new_tags;
+    tags_map tags;
 
     CTagsResultParser::Parse(
         s,
         nParseFlags,
         CTagsResultParser::tParseContext(
-            new_tags,
+            tags,
             getFileDirectory(tt->source_file_name),
             tt->temp_input_file.empty() ? t_string() : tt->source_file_name
         ) 
     );
 
-    {
-        CThreadLock lock(m_csTagsMap);
-
-        m_cachedTags.emplace_back(std::move(new_tags));
-        m_tags = &m_cachedTags.back();
-
-        if ( m_opt.getBool(OPT_CTAGS_SCANFOLDER) && !m_tags->empty() )
-        {
-            std::list<std::list<tags_map>::iterator> tagsToRemove;
-
-            for ( auto itr = m_cachedTags.begin(); itr != m_cachedTags.end(); ++itr )
-            {
-                const tags_map& tags = *itr;
-                if ( m_tags == &tags )
-                    continue;
-
-                bool bAllFilesIncluded = true;
-                for ( const auto& fileItem : tags )
-                {
-                    if ( m_tags->find(fileItem.first) == m_tags->end() )
-                    {
-                        bAllFilesIncluded = false;
-                        break;
-                    }
-                }
-
-                if ( bAllFilesIncluded )
-                    tagsToRemove.push_back(itr);
-            }
-
-            if ( !tagsToRemove.empty() )
-            {
-                for ( auto& itr : tagsToRemove )
-                {
-                    m_cachedTags.erase(itr);
-                }
-            }
-        }
-    }
+    m_Data.AddTagsToCache(std::move(tags));
 
     // let's update tags view in the primary thread
     ::SendNotifyMessage( this->GetHwnd(), WM_UPDATETAGSVIEW, 0, 0 );
@@ -579,19 +539,19 @@ BOOL CTagsDlg::OnCommand(WPARAM wParam, LPARAM lParam)
             break;
 
         case IDM_SORTLINE:
-            SetSortMode(TSM_LINE);
+            SetSortMode(CTagsDlgData::TSM_LINE);
             break;
 
         case IDM_SORTNAME:
-            SetSortMode(TSM_NAME);
+            SetSortMode(CTagsDlgData::TSM_NAME);
             break;
 
         case IDM_VIEWLIST:
-            SetViewMode(TVM_LIST, m_sortMode);
+            SetViewMode(CTagsDlgData::TVM_LIST, m_sortMode);
             break;
 
         case IDM_VIEWTREE:
-            SetViewMode(TVM_TREE, m_sortMode);
+            SetViewMode(CTagsDlgData::TVM_TREE, m_sortMode);
             break;
 
         case IDM_PARSE:
@@ -660,7 +620,7 @@ void CTagsDlg::OnCancel()
 
     //if ( ::GetFocus() != m_edFilter.GetHwnd() )
     {
-        if ( m_opt.getBool(OPT_VIEW_ESCFOCUSTOEDITOR) )
+        if ( GetOptions().getBool(CTagsDlgData::OPT_VIEW_ESCFOCUSTOEDITOR) )
         {
             PostMessage(WM_FOCUSTOEDITOR);
         }
@@ -723,8 +683,6 @@ BOOL CTagsDlg::OnInitDialog()
     iccex.dwSize = sizeof(INITCOMMONCONTROLSEX);
     ::InitCommonControlsEx( &iccex );
 
-    //initOptions();
-
     m_edFilter.SetTagsDlg(this);
     m_lvTags.SetTagsDlg(this);
     m_tvTags.SetTagsDlg(this);
@@ -778,7 +736,7 @@ BOOL CTagsDlg::OnInitDialog()
     m_tbButtons.AddButtons(nTbButtons + nTbSeparators, tbButtonArray);
 
     m_lvTags.SetExtendedStyle(LVS_EX_FULLROWSELECT);
-    m_lvTags.InsertColumn( LVC_NAME, cszListViewColumnNames[LVC_NAME], LVCFMT_LEFT, m_opt.getInt(OPT_VIEW_NAMEWIDTH) );
+    m_lvTags.InsertColumn( LVC_NAME, cszListViewColumnNames[LVC_NAME], LVCFMT_LEFT, GetOptions().getInt(CTagsDlgData::OPT_VIEW_NAMEWIDTH) );
     m_lvTags.InsertColumn( LVC_TYPE, cszListViewColumnNames[LVC_TYPE], LVCFMT_RIGHT, 60 );
     m_lvTags.InsertColumn( LVC_LINE, cszListViewColumnNames[LVC_LINE], LVCFMT_RIGHT, 60 );
     m_lvTags.InsertColumn( LVC_FILE, cszListViewColumnNames[LVC_FILE], LVCFMT_LEFT, 100 );
@@ -788,13 +746,13 @@ BOOL CTagsDlg::OnInitDialog()
 
     ApplyColors();
 
-    if ( GetOptions().getBool(CTagsDlg::OPT_VIEW_SHOWTOOLTIPS) )
+    if ( GetOptions().getBool(CTagsDlgData::OPT_VIEW_SHOWTOOLTIPS) )
     {
         createTooltips();
     }
 
-    eTagsViewMode viewMode = toViewMode( m_opt.getInt(OPT_VIEW_MODE) );
-    eTagsSortMode sortMode = toSortMode( m_opt.getInt(OPT_VIEW_SORT) );
+    CTagsDlgData::eTagsViewMode viewMode = toViewMode( GetOptions().getInt(CTagsDlgData::OPT_VIEW_MODE) );
+    CTagsDlgData::eTagsSortMode sortMode = toSortMode( GetOptions().getInt(CTagsDlgData::OPT_VIEW_SORT) );
     SetViewMode(viewMode, sortMode);
 
     OnSize(true);
@@ -846,7 +804,7 @@ LRESULT CTagsDlg::OnNotify(WPARAM wParam, LPARAM lParam)
             break;
 
         case LVN_COLUMNCLICK:
-            SetSortMode( (eTagsSortMode) (TSM_NAME + ((LPNMLISTVIEW) lParam)->iSubItem) );
+            SetSortMode( toSortMode(CTagsDlgData::TSM_NAME + ((LPNMLISTVIEW) lParam)->iSubItem) );
             break;
 
         case LVN_ITEMACTIVATE:
@@ -864,7 +822,7 @@ void CTagsDlg::OnSize(bool bInitial )
     if ( bInitial )
     {
         CRect r = GetWindowRect();
-        ::MoveWindow( GetHwnd(), 0, 0, m_opt.getInt(OPT_VIEW_WIDTH), r.Height(), TRUE );
+        ::MoveWindow( GetHwnd(), 0, 0, GetOptions().getInt(CTagsDlgData::OPT_VIEW_WIDTH), r.Height(), TRUE );
         return;
     }
 
@@ -896,8 +854,8 @@ void CTagsDlg::OnSize(bool bInitial )
 
     // list-view window
     r = m_lvTags.GetWindowRect();
-    ::MoveWindow( m_lvTags, left, top, width - 2*left, height - top - 2, (m_viewMode == TVM_LIST) );
-    if ( GetOptions().getBool(CTagsDlg::OPT_VIEW_SHOWTOOLTIPS) )
+    ::MoveWindow( m_lvTags, left, top, width - 2*left, height - top - 2, (m_viewMode == CTagsDlgData::TVM_LIST) );
+    if ( GetOptions().getBool(CTagsDlgData::OPT_VIEW_SHOWTOOLTIPS) )
     {
         if ( m_ttHints.GetHwnd() && m_ttHints.IsWindow() )
             m_ttHints.SetToolRect(m_lvTags.GetClientRect(), m_lvTags, IDC_LV_TAGS);
@@ -905,8 +863,8 @@ void CTagsDlg::OnSize(bool bInitial )
 
     // tree-view window
     r = m_tvTags.GetWindowRect();
-    ::MoveWindow( m_tvTags, left, top, width - 2*left, height - top - 2, (m_viewMode == TVM_TREE) );
-    if ( GetOptions().getBool(CTagsDlg::OPT_VIEW_SHOWTOOLTIPS) )
+    ::MoveWindow( m_tvTags, left, top, width - 2*left, height - top - 2, (m_viewMode == CTagsDlgData::TVM_TREE) );
+    if ( GetOptions().getBool(CTagsDlgData::OPT_VIEW_SHOWTOOLTIPS) )
     {
         if ( m_ttHints.GetHwnd() && m_ttHints.IsWindow() )
             m_ttHints.SetToolRect(m_tvTags.GetClientRect(), m_tvTags, IDC_TV_TAGS);
@@ -918,13 +876,13 @@ void CTagsDlg::OnSize(bool bInitial )
     r = GetWindowRect();
     if ( r.Width() > 0 )
     {
-        m_opt.setInt( OPT_VIEW_WIDTH, r.Width() );
+        GetOptions().setInt( CTagsDlgData::OPT_VIEW_WIDTH, r.Width() );
     }
 
     int iNameWidth = m_lvTags.GetColumnWidth(0);
     if ( iNameWidth > 0 )
     {
-        m_opt.setInt( OPT_VIEW_NAMEWIDTH, iNameWidth );
+        GetOptions().setInt( CTagsDlgData::OPT_VIEW_NAMEWIDTH, iNameWidth );
     }
 }
 
@@ -985,9 +943,9 @@ void CTagsDlg::OnParseClicked()
 
 bool CTagsDlg::GoToTag(const t_string& filePath, const TCHAR* cszTagName, const TCHAR* cszTagScope)  // not implemented yet
 {
-    if ( cszTagName && cszTagName[0] && m_tags && !m_tags->empty() )
+    if ( cszTagName && cszTagName[0] && !m_Data.IsTagsEmpty() )
     {
-        tTagData* pTag = getTagByNameAndScope(filePath, cszTagName, cszTagScope);
+        tTagData* pTag = m_Data.GetTagByNameAndScope(filePath, cszTagName, cszTagScope);
         if ( pTag )
         {
         }
@@ -1001,21 +959,15 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
     if ( !cszFileName )
     {
         ClearItems(true);
-        m_tags = nullptr;
+        m_Data.SetTags(nullptr);
         return;
     }
 
-    tags_map* prev_tags = m_tags;
+    tags_map* prev_tags = m_Data.GetTags();
 
+    if ( m_Data.GetTagsForFile(cszFileName) && !bReparsePhysicalFile )
     {
-        CThreadLock lock(m_csTagsMap);
-
-        m_tags = getCachedTagsMap(cszFileName); // can be nullptr
-    }
-
-    if ( m_tags && !bReparsePhysicalFile )
-    {
-        if ( m_tags != prev_tags )
+        if ( m_Data.GetTags() != prev_tags )
         {
             ClearItems(true);
             ::SendNotifyMessage( this->GetHwnd(), WM_UPDATETAGSVIEW, 0, 0 );
@@ -1041,7 +993,7 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
         lstrcpyn(szExt, pszExt, 18);
 
         int nLen = 0;
-        const TCHAR* pszSkipFileExts = m_opt.getStr(OPT_CTAGS_SKIPFILEEXTS, &nLen);
+        const TCHAR* pszSkipFileExts = GetOptions().getStr(CTagsDlgData::OPT_CTAGS_SKIPFILEEXTS, &nLen);
         if ( pszSkipFileExts && pszSkipFileExts[0] )
         {
             std::unique_ptr<TCHAR[]> pSkipExts(new TCHAR[nLen + 1]);
@@ -1058,13 +1010,9 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
     if ( !addCTagsThreadForFile(cszFileName) )
         return;
 
-    if ( m_tags )
+    if ( m_Data.GetTags() )
     {
-        CThreadLock lock(m_csTagsMap);
-
-        auto itr = getCachedTagsMapItr(cszFileName);
-        m_cachedTags.erase(itr);
-        m_tags = nullptr;
+        m_Data.RemoveTagsForFile(cszFileName);
     }
 
     t_string ctagsOptPath = m_ctagsExeFilePath;
@@ -1094,7 +1042,7 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
 
     if ( tt->temp_input_file != m_ctagsTempInputFilePath )
     {
-        if ( m_opt.getInt(OPT_DEBUG_DELETETEMPINPUTFILE) != DTF_NEVERDELETE )
+        if ( GetOptions().getInt(CTagsDlgData::OPT_DEBUG_DELETETEMPINPUTFILE) != CTagsDlgData::DTF_NEVERDELETE )
         {
             DeleteTempFile(m_ctagsTempInputFilePath);
         }
@@ -1103,7 +1051,7 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
 
     if ( tt->temp_output_file != m_ctagsTempOutputFilePath )
     {
-        if ( m_opt.getInt(OPT_DEBUG_DELETETEMPOUTPUTFILE) != DTF_NEVERDELETE )
+        if ( GetOptions().getInt(CTagsDlgData::OPT_DEBUG_DELETETEMPOUTPUTFILE) != CTagsDlgData::DTF_NEVERDELETE )
         {
             DeleteTempFile(m_ctagsTempOutputFilePath);
         }
@@ -1149,7 +1097,7 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
     tt->cmd_line += _T(" --fields=fKnste ");
     if ( tt->temp_input_file.empty() )
     {
-        if ( !m_opt.getBool(OPT_CTAGS_SCANFOLDER) )
+        if ( !GetOptions().getBool(CTagsDlgData::OPT_CTAGS_SCANFOLDER) )
         {
             tt->cmd_line += _T('\"');
             tt->cmd_line += tt->source_file_name;
@@ -1168,7 +1116,7 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
         }
         else
         {
-            if ( m_opt.getBool(OPT_CTAGS_SCANFOLDERRECURSIVELY) )
+            if ( GetOptions().getBool(CTagsDlgData::OPT_CTAGS_SCANFOLDERRECURSIVELY) )
             {
                 // Note: the recursive scanning may generate a tag file of several MB that takes toooooo long to visualize
                 // TODO: consider virtual TreeView & ListView
@@ -1224,35 +1172,35 @@ void CTagsDlg::ReparseCurrentFile()
     OnParseClicked();
 }
 
-void CTagsDlg::SetSortMode(eTagsSortMode sortMode)
+void CTagsDlg::SetSortMode(CTagsDlgData::eTagsSortMode sortMode)
 {
-    if ( sortMode == TSM_FILE )
+    if ( sortMode == CTagsDlgData::TSM_FILE )
     {
-        sortMode = TSM_LINE;
+        sortMode = CTagsDlgData::TSM_LINE;
     }
 
-    if ( (sortMode != TSM_NONE) && (sortMode != m_sortMode) )
+    if ( (sortMode != CTagsDlgData::TSM_NONE) && (sortMode != m_sortMode) )
     {
-        m_opt.setInt( OPT_VIEW_SORT, (int) sortMode );
+        GetOptions().setInt( CTagsDlgData::OPT_VIEW_SORT, (int) sortMode );
 
         m_prevSelStart = -1;
         deleteAllItems(true);
 
-        if ( m_viewMode == TVM_TREE )
+        if ( m_viewMode == CTagsDlgData::TVM_TREE )
         {
             m_tvTags.SetRedraw(FALSE);
 
             switch ( sortMode )
             {
-                case TSM_LINE:
-                case TSM_TYPE:
-                    sortTagsTV(TSM_LINE);
+                case CTagsDlgData::TSM_LINE:
+                case CTagsDlgData::TSM_TYPE:
+                    sortTagsTV(CTagsDlgData::TSM_LINE);
                     m_tbButtons.SetButtonState(IDM_SORTNAME, TBSTATE_ENABLED);
                     m_tbButtons.SetButtonState(IDM_SORTLINE, TBSTATE_ENABLED | TBSTATE_CHECKED);
                     break;
 
-                case TSM_NAME:
-                    sortTagsTV(TSM_NAME);
+                case CTagsDlgData::TSM_NAME:
+                    sortTagsTV(CTagsDlgData::TSM_NAME);
                     m_tbButtons.SetButtonState(IDM_SORTLINE, TBSTATE_ENABLED);
                     m_tbButtons.SetButtonState(IDM_SORTNAME, TBSTATE_ENABLED | TBSTATE_CHECKED);
                     break;
@@ -1269,18 +1217,18 @@ void CTagsDlg::SetSortMode(eTagsSortMode sortMode)
 
             switch ( sortMode )
             {
-                case TSM_LINE:
+                case CTagsDlgData::TSM_LINE:
                     sortTagsByLineLV();
                     m_tbButtons.SetButtonState(IDM_SORTNAME, TBSTATE_ENABLED);
                     m_tbButtons.SetButtonState(IDM_SORTLINE, TBSTATE_ENABLED | TBSTATE_CHECKED);
                     break;
 
-                case TSM_TYPE:
-                    sortTagsByNameOrTypeLV(TSM_TYPE);
+                case CTagsDlgData::TSM_TYPE:
+                    sortTagsByNameOrTypeLV(CTagsDlgData::TSM_TYPE);
                     break;
 
-                case TSM_NAME:
-                    sortTagsByNameOrTypeLV(TSM_NAME);
+                case CTagsDlgData::TSM_NAME:
+                    sortTagsByNameOrTypeLV(CTagsDlgData::TSM_NAME);
                     m_tbButtons.SetButtonState(IDM_SORTLINE, TBSTATE_ENABLED);
                     m_tbButtons.SetButtonState(IDM_SORTNAME, TBSTATE_ENABLED | TBSTATE_CHECKED);
                     break;
@@ -1296,14 +1244,14 @@ void CTagsDlg::SetSortMode(eTagsSortMode sortMode)
     }
 }
 
-void CTagsDlg::SetViewMode(eTagsViewMode viewMode, eTagsSortMode sortMode)
+void CTagsDlg::SetViewMode(CTagsDlgData::eTagsViewMode viewMode, CTagsDlgData::eTagsSortMode sortMode)
 {
-    if ( (viewMode != TVM_NONE) && (viewMode != m_viewMode) )
+    if ( (viewMode != CTagsDlgData::TVM_NONE) && (viewMode != m_viewMode) )
     {
-        m_opt.setInt( OPT_VIEW_MODE, (int) viewMode );
+        GetOptions().setInt( CTagsDlgData::OPT_VIEW_MODE, (int) viewMode );
 
         m_viewMode = viewMode;
-        m_sortMode = TSM_NONE;
+        m_sortMode = CTagsDlgData::TSM_NONE;
         m_lvTags.ShowWindow(SW_HIDE);
         m_tvTags.ShowWindow(SW_HIDE);
     }
@@ -1312,14 +1260,14 @@ void CTagsDlg::SetViewMode(eTagsViewMode viewMode, eTagsSortMode sortMode)
 
     switch ( m_viewMode )
     {
-        case TVM_LIST:
+        case CTagsDlgData::TVM_LIST:
             if ( !m_lvTags.IsWindowVisible() )
                 m_lvTags.ShowWindow(SW_SHOWNORMAL);
             m_tbButtons.SetButtonState(IDM_VIEWTREE, TBSTATE_ENABLED);
             m_tbButtons.SetButtonState(IDM_VIEWLIST, TBSTATE_ENABLED | TBSTATE_CHECKED);
             break;
 
-        case TVM_TREE:
+        case CTagsDlgData::TVM_TREE:
             if ( !m_tvTags.IsWindowVisible() )
                 m_tvTags.ShowWindow(SW_SHOWNORMAL);
             m_tbButtons.SetButtonState(IDM_VIEWLIST, TBSTATE_ENABLED);
@@ -1330,7 +1278,7 @@ void CTagsDlg::SetViewMode(eTagsViewMode viewMode, eTagsSortMode sortMode)
 
 void CTagsDlg::UpdateCurrentItem()
 {
-    if ( m_pEdWr && m_tags && !m_tags->empty() && !m_isUpdatingSelToItem )
+    if ( m_pEdWr && !m_Data.IsTagsEmpty() && !m_isUpdatingSelToItem )
     {
         int selEnd, selStart = m_pEdWr->ewGetSelectionPos(selEnd);
 
@@ -1341,14 +1289,14 @@ void CTagsDlg::UpdateCurrentItem()
             int line = m_pEdWr->ewGetLineFromPos(selStart) + 1; // 1-based line
 
             const t_string filePath = m_pEdWr->ewGetFilePathName();
-            auto fileItr = m_tags->find(filePath);
-            if ( fileItr == m_tags->end() )
+            auto fileItr = m_Data.GetTags()->find(filePath);
+            if ( fileItr == m_Data.GetTags()->end() )
             {
                 return;
             }
 
             file_tags& fileTags = fileItr->second;
-            file_tags::const_iterator itr = findTagByLine(fileTags, line);
+            file_tags::const_iterator itr = m_Data.FindTagByLine(fileTags, line);
             if ( itr == fileTags.end() )
             {
                 if ( itr != fileTags.begin() )
@@ -1369,7 +1317,7 @@ void CTagsDlg::UpdateCurrentItem()
                     return;
             }
 
-            if ( m_viewMode == TVM_TREE )
+            if ( m_viewMode == CTagsDlgData::TVM_TREE )
             {
                 HTREEITEM hItem = (HTREEITEM) (*itr)->data.p;
                 if ( hItem )
@@ -1409,17 +1357,17 @@ void CTagsDlg::UpdateCurrentItem()
 
 void CTagsDlg::UpdateTagsView()
 {
-    if ( m_tags && m_tags->empty() )
+    if ( m_Data.GetTags() && m_Data.GetTags()->empty() )
     {
-        m_tags->insert( std::make_pair(m_pEdWr->ewGetFilePathName(), file_tags()) );
+        m_Data.GetTags()->insert( std::make_pair(m_pEdWr->ewGetFilePathName(), file_tags()) );
     }
 
     m_prevSelStart = -1;
 
-    eTagsViewMode viewMode = m_viewMode;
-    eTagsSortMode sortMode = m_sortMode;
+    CTagsDlgData::eTagsViewMode viewMode = m_viewMode;
+    CTagsDlgData::eTagsSortMode sortMode = m_sortMode;
     //disabled to avoid the background blink: m_viewMode = TVM_NONE;
-    m_sortMode = TSM_NONE;
+    m_sortMode = CTagsDlgData::TSM_NONE;
     SetViewMode(viewMode, sortMode);
     UpdateNavigationButtons();
     if ( m_tbButtons.IsWindow() )
@@ -1519,7 +1467,7 @@ void CTagsDlg::ApplyColors()
     bool bColorChanged = false;
     IEditorWrapper::sEditorColors colors;
 
-    if ( m_opt.getBool(CTagsDlg::OPT_COLORS_USEEDITORCOLORS) &&
+    if ( GetOptions().getBool(CTagsDlgData::OPT_COLORS_USEEDITORCOLORS) &&
          m_pEdWr && m_pEdWr->ewGetEditorColors(colors) )
     {
         bApplyEditorColors = true;
@@ -1589,10 +1537,7 @@ void CTagsDlg::ClearCachedTags()
 
     if ( !GetHwnd() || !IsWindowVisible() )
     {
-        CThreadLock lock(m_csTagsMap);
-
-        m_cachedTags.clear();
-        m_tags = nullptr;
+        m_Data.RemoveAllTagsFromCache();
     }
 }
 
@@ -1609,35 +1554,7 @@ void CTagsDlg::PurifyCachedTags()
     }
 
     IEditorWrapper::file_set openedFiles = m_pEdWr->ewGetOpenedFilePaths();
-    std::list<std::list<tags_map>::const_iterator> itemsToDelete;
-
-    {
-        CThreadLock lock(m_csTagsMap);
-
-        std::list<tags_map>::const_iterator itrEnd = m_cachedTags.end();
-        std::list<tags_map>::const_iterator itrTags = m_cachedTags.begin();
-        for ( ; itrTags != itrEnd; ++itrTags )
-        {
-            const tags_map& tagsMap = *itrTags;
-            auto itrFile = std::find_if(tagsMap.begin(), tagsMap.end(),
-                [&openedFiles](const tags_map::value_type& fileItem){ return (openedFiles.find(fileItem.first) != openedFiles.end()); }
-            );
-            if ( itrFile == tagsMap.end() )
-            {
-                itemsToDelete.push_back(itrTags);
-            }
-        }
-
-        for ( auto& itr : itemsToDelete )
-        {
-            m_cachedTags.erase(itr);
-        }
-
-        if ( m_cachedTags.empty() )
-        {
-            m_tags = nullptr;
-        }
-    }
+    m_Data.PurifyTagsInCache(openedFiles);
 
     if ( openedFiles.empty() )
     {
@@ -1793,7 +1710,7 @@ void CTagsDlg::OnSettingsChanged()
 
         if ( IsWindow() )
         {
-            if ( GetOptions().getBool(CTagsDlg::OPT_VIEW_SHOWTOOLTIPS) )
+            if ( GetOptions().getBool(CTagsDlgData::OPT_VIEW_SHOWTOOLTIPS) )
                 createTooltips();
             else
                 destroyTooltips();
@@ -1849,128 +1766,6 @@ void CTagsDlg::checkCTagsExePath()
     }
 }
 
-CTagsDlg::file_tags::iterator CTagsDlg::getTagByLine(file_tags& fileTags, const int line)
-{
-    file_tags::iterator itr = std::upper_bound(
-        fileTags.begin(),
-        fileTags.end(),
-        line,
-        [](const int line, const std::unique_ptr<tTagData>& pTag){ return (line < pTag->line); }
-    ); // returns an item with itr->second.line > line
-
-    if ( itr == fileTags.end() && itr != fileTags.begin() )
-    {
-        // there is no item with itr->second.line > line, so should be itr->second.line == line
-        --itr;
-    }
-
-    if ( itr != fileTags.end() )
-    {
-        auto itr2 = itr;
-
-        itr = fileTags.end(); // will return end() if itr2 does not succeed
-
-        for ( ; ; --itr2 )
-        {
-            if ( (*itr2)->line <= line )
-            {
-                itr = itr2; // success!
-                break;
-            }
-
-            if ( itr2 == fileTags.begin() )
-            {
-                // We should not get here, but let's have it to be able to set a breakpoint
-                break;
-            }
-        }
-    }
-
-    return itr;
-}
-
-CTagsDlg::file_tags::iterator CTagsDlg::findTagByLine(file_tags& fileTags, const int line)
-{
-    file_tags::iterator itr = getTagByLine(fileTags, line);
-
-    if ( itr != fileTags.end() )
-    {
-        for ( auto itr2 = itr; ; --itr2 )
-        {
-            if ( (*itr2)->end_line >= line )
-            {
-                itr = itr2;
-                break;
-            }
-
-            if ( itr2 == fileTags.begin() )
-                break;
-
-            if ( (*itr2)->tagScope.empty() )
-                break;
-        }
-    }
-
-    return itr;
-}
-
-std::vector<CTagsDlg::tags_map::iterator> CTagsDlg::getTagsMapItrsByFilePath(const t_string& filePath)
-{
-    if ( m_tags )
-    {
-        std::vector<tags_map::iterator> vTagsMapItr;
-        t_string filePathNoExt(filePath, 0, getFileExtPos(filePath));
-
-        for ( tags_map::iterator itr = m_tags->begin(); itr != m_tags->end(); ++itr )
-        {
-            t_string fpathNoExt(itr->first, 0, getFileExtPos(itr->first));
-            size_t n = (filePathNoExt.length() < fpathNoExt.length()) ? filePathNoExt.length() : fpathNoExt.length();
-            if ( _tcsnicmp(filePathNoExt.c_str(), fpathNoExt.c_str(), n) == 0 )
-            {
-                vTagsMapItr.push_back(itr);
-            }
-        }
-        return vTagsMapItr;
-    }
-    return std::vector<tags_map::iterator>();
-}
-
-CTagsDlg::tTagData* CTagsDlg::getTagByNameAndScope(const t_string& filePath, const t_string& tagName, const t_string& tagScope)
-{
-    if ( m_tags )
-    {
-        std::vector<tags_map::iterator> vTagsMapItr = getTagsMapItrsByFilePath(filePath);
-        for ( tags_map::iterator itrTagsMap : vTagsMapItr )
-        {
-            file_tags& fileTags = itrTagsMap->second;
-            auto itr = std::find_if(fileTags.begin(), fileTags.end(),
-                [&tagName, &tagScope](const std::unique_ptr<tTagData>& tag){ return (tag->tagName == tagName && tag->tagScope == tagScope); }
-            );
-            if ( itr != fileTags.end() )
-            {
-                tTagData* pTag = itr->get();
-                pTag->pFilePath = &itrTagsMap->first;
-                return pTag;
-            }
-        }
-    }
-    return nullptr;
-}
-
-std::list<CTagsDlg::tags_map>::iterator CTagsDlg::getCachedTagsMapItr(const TCHAR* cszFileName)
-{
-    return std::find_if(
-        m_cachedTags.begin(), m_cachedTags.end(),
-        [&cszFileName](const tags_map& tagsMap){ return (tagsMap.find(cszFileName) != tagsMap.end()); }
-    );
-}
-
-CTagsDlg::tags_map* CTagsDlg::getCachedTagsMap(const TCHAR* cszFileName)
-{
-    auto itrTags = getCachedTagsMapItr(cszFileName);
-    return ( (itrTags != m_cachedTags.end()) ? &(*itrTags) : nullptr );
-}
-
 bool CTagsDlg::addCTagsThreadForFile(const t_string& filePath)
 {
     bool bAdded = false;
@@ -2011,51 +1806,6 @@ bool CTagsDlg::hasAnyCTagsThread() const
     return (::InterlockedCompareExchange(&m_nTagsThreadCount, 0, 0) == 0);
 }
 
-void CTagsDlg::initOptions()
-{
-    if ( m_opt.HasOptions() )
-        return;
-
-    const TCHAR cszView[]     = _T("View");
-    const TCHAR cszColors[]   = _T("Colors");
-    const TCHAR cszBehavior[] = _T("Behavior");
-    const TCHAR cszCtags[]    = _T("Ctags");
-    const TCHAR cszDebug[]    = _T("Debug");
-
-    m_opt.ReserveMemory(OPT_COUNT);
-
-    // View section
-    m_opt.AddInt( OPT_VIEW_MODE,              cszView,  _T("Mode"),             TVM_LIST );
-    m_opt.AddInt( OPT_VIEW_SORT,              cszView,  _T("Sort"),             TSM_LINE );
-    m_opt.AddInt( OPT_VIEW_WIDTH,             cszView,  _T("Width"),            220      );
-    m_opt.AddInt( OPT_VIEW_NAMEWIDTH,         cszView,  _T("NameWidth"),        220      );
-    m_opt.AddBool( OPT_VIEW_SHOWTOOLTIPS,     cszView,  _T("ShowTooltips"),     true     );
-    m_opt.AddBool( OPT_VIEW_NESTEDSCOPETREE,  cszView,  _T("NestedScopeTree"),  true     );
-    m_opt.AddBool( OPT_VIEW_DBLCLICKTREE,     cszView,  _T("DblClickTree"),     true     );
-    m_opt.AddBool( OPT_VIEW_ESCFOCUSTOEDITOR, cszView,  _T("EscFocusToEditor"), false    );
-
-    // Colors section
-    m_opt.AddBool( OPT_COLORS_USEEDITORCOLORS,  cszColors, _T("UseEditorColors"), true );
-    //m_opt.AddHexInt( OPT_COLORS_BKGND,   cszColor, _T("BkGnd"),   0 );
-    //m_opt.AddHexInt( OPT_COLORS_TEXT,    cszColor, _T("Text"),    0 );
-    //m_opt.AddHexInt( OPT_COLORS_TEXTSEL, cszColor, _T("TextSel"), 0 );
-    //m_opt.AddHexInt( OPT_COLORS_SELA,    cszColor, _T("SelA"),    0 );
-    //m_opt.AddHexInt( OPT_COLORS_SELN,    cszColor, _T("SelN"),    0 );
-
-    // Behavior section
-    m_opt.AddBool( OPT_BEHAVIOR_PARSEONSAVE, cszBehavior, _T("ParseOnSave"), true );
-
-    // Ctags section
-    m_opt.AddBool( OPT_CTAGS_OUTPUTSTDOUT,          cszCtags, _T("OutputToStdout"), false );
-    m_opt.AddBool( OPT_CTAGS_SCANFOLDER,            cszCtags, _T("ScanFolder"), false );
-    m_opt.AddBool( OPT_CTAGS_SCANFOLDERRECURSIVELY, cszCtags, _T("ScanFolderRecursively"), false );
-    m_opt.AddStr( OPT_CTAGS_SKIPFILEEXTS,           cszCtags, _T("SkipFileExts"), _T(".txt") );
-
-    // Debug section
-    m_opt.AddInt(OPT_DEBUG_DELETETEMPINPUTFILE, cszDebug, _T("DeleteTempInputFiles"), DTF_ALWAYSDELETE);
-    m_opt.AddInt(OPT_DEBUG_DELETETEMPOUTPUTFILE, cszDebug, _T("DeleteTempOutputFiles"), DTF_ALWAYSDELETE);
-}
-
 bool CTagsDlg::isTagMatchFilter(const t_string& tagName) const
 {
     const int len_filt = static_cast<int>(m_tagFilter.length());
@@ -2085,9 +1835,9 @@ size_t CTagsDlg::getNumTotalItemsForSorting() const
 {
     size_t nTotalItems = 0;
 
-    if ( m_tags )
+    if ( m_Data.GetTags() )
     {
-        for ( const auto& fileItem : *m_tags )
+        for ( const auto& fileItem : *m_Data.GetTags() )
         {
             nTotalItems += fileItem.second.size();
         }
@@ -2139,11 +1889,11 @@ size_t  CTagsDlg::getNumItemsForSorting(const CTagsDlg::file_tags& fileTags) con
 
 void CTagsDlg::sortTagsByLineLV()
 {
-    if ( !m_tags )
+    if ( !m_Data.GetTags() )
         return;
 
     int nItem = 0;
-    for ( auto& fileItem : *m_tags )
+    for ( auto& fileItem : *m_Data.GetTags() )
     {
         file_tags& fileTags = fileItem.second;
         for ( std::unique_ptr<tTagData>& pTag : fileTags )
@@ -2163,15 +1913,15 @@ void CTagsDlg::sortTagsByLineLV()
     }
 }
 
-void CTagsDlg::sortTagsByNameOrTypeLV(eTagsSortMode sortMode)
+void CTagsDlg::sortTagsByNameOrTypeLV(CTagsDlgData::eTagsSortMode sortMode)
 {
-    if ( !m_tags )
+    if ( !m_Data.GetTags() )
         return;
 
     std::vector<tTagData*> tags;
     tags.reserve(getNumTotalItemsForSorting());
 
-    for ( auto& fileItem : *m_tags )
+    for ( auto& fileItem : *m_Data.GetTags() )
     {
         file_tags& fileTags = fileItem.second;
         for ( std::unique_ptr<tTagData>& pTag : fileTags )
@@ -2190,7 +1940,7 @@ void CTagsDlg::sortTagsByNameOrTypeLV(eTagsSortMode sortMode)
         }
     }
 
-    if ( sortMode == TSM_NAME )
+    if ( sortMode == CTagsDlgData::TSM_NAME )
     {
         std::sort(
             tags.begin(),
@@ -2200,7 +1950,7 @@ void CTagsDlg::sortTagsByNameOrTypeLV(eTagsSortMode sortMode)
     }
     else // if ( sortMode == TSM_TYPE )
     {
-        if ( m_sortMode == TSM_NAME )
+        if ( m_sortMode == CTagsDlgData::TSM_NAME )
         {
             // the previous sorting was by name, re-applying it first
             std::sort(
@@ -2225,14 +1975,14 @@ void CTagsDlg::sortTagsByNameOrTypeLV(eTagsSortMode sortMode)
     }
 }
 
-void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
+void CTagsDlg::sortTagsTV(CTagsDlgData::eTagsSortMode sortMode)
 {
-    if ( !m_tags )
+    if ( !m_Data.GetTags() )
         return;
 
     std::list<tTagsByFile> tags;
 
-    for ( auto& fileItem : *m_tags )
+    for ( auto& fileItem : *m_Data.GetTags() )
     {
         file_tags& fileTags = fileItem.second;
 
@@ -2257,7 +2007,7 @@ void CTagsDlg::sortTagsTV(eTagsSortMode sortMode)
 
         if ( !tagsByFile.fileTags.empty() )
         {
-            if ( sortMode == TSM_LINE )
+            if ( sortMode == CTagsDlgData::TSM_LINE )
             {
                 std::sort(
                     tagsByFile.fileTags.begin(),
@@ -2317,7 +2067,7 @@ void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
         scopeSep = _T(".");  // nested scopes in a form of "X.Y.Z"
     }
 
-    if ( m_opt.getBool(OPT_VIEW_NESTEDSCOPETREE) )
+    if ( GetOptions().getBool(CTagsDlgData::OPT_VIEW_NESTEDSCOPETREE) )
     {
         t_string tagScope;
 
@@ -2372,7 +2122,7 @@ void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
                         // adding a scope item
                         t_string::size_type nPos = scopeSep.empty() ? t_string::npos : tagScope.rfind(scopeSep);
                         tagScopeName = (nPos == t_string::npos) ? tagScope : tagScope.substr(nPos + scopeSep.length());
-                        tTagData* pScopeTag = getTagByNameAndScope(tagsByFile.filePath, tagScopeName, (nPos == t_string::npos) ? t_string() : tagScope.substr(0, nPos));
+                        tTagData* pScopeTag = m_Data.GetTagByNameAndScope(tagsByFile.filePath, tagScopeName, (nPos == t_string::npos) ? t_string() : tagScope.substr(0, nPos));
                         hScopeItem = addTreeViewItem(hScopeItem, tagScopeName, pScopeTag);
                         scopeMap[tagScope] = hScopeItem;
 
@@ -2458,7 +2208,7 @@ void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
                     // adding a scope item
                     t_string::size_type nPos = scopeSep.empty() ? t_string::npos : pTag->tagScope.rfind(scopeSep);
                     tagScopeName = (nPos == t_string::npos) ? pTag->tagScope : pTag->tagScope.substr(nPos + scopeSep.length());
-                    tTagData* pScopeTag = getTagByNameAndScope(tagsByFile.filePath, tagScopeName, (nPos == t_string::npos) ? t_string() : pTag->tagScope.substr(0, nPos));
+                    tTagData* pScopeTag = m_Data.GetTagByNameAndScope(tagsByFile.filePath, tagScopeName, (nPos == t_string::npos) ? t_string() : pTag->tagScope.substr(0, nPos));
                     hScopeItem = addTreeViewItem(hFileItem, pTag->tagScope, pScopeTag);
                     scopeMap[pTag->tagScope] = hScopeItem;
 

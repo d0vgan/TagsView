@@ -183,6 +183,7 @@
     <ClCompile Include="src\TagsViewBase\TagsCommon.cpp" />
     <ClCompile Include="src\TagsViewBase\TagsDlg.cpp" />
     <ClCompile Include="src\TagsViewBase\TagsDlgChild.cpp" />
+    <ClCompile Include="src\TagsViewBase\TagsDlgData.cpp" />
     <ClCompile Include="src\TagsViewBase\TagsFilterEdit.cpp" />
     <ClCompile Include="src\TagsViewBase\TagsListView.cpp" />
     <ClCompile Include="src\TagsViewBase\TagsTreeView.cpp" />
@@ -203,6 +204,7 @@
     <ClInclude Include="src\TagsViewBase\TagsCommon.h" />
     <ClInclude Include="src\TagsViewBase\TagsDlg.h" />
     <ClInclude Include="src\TagsViewBase\TagsDlgChild.h" />
+    <ClInclude Include="src\TagsViewBase\TagsDlgData.h" />
     <ClInclude Include="src\TagsViewBase\TagsFilterEdit.h" />
     <ClInclude Include="src\TagsViewBase\TagsListView.h" />
     <ClInclude Include="src\TagsViewBase\TagsTreeView.h" />
