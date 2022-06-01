@@ -1,5 +1,5 @@
-#ifndef _options_manager_h_
-#define _options_manager_h_
+#ifndef _OPTIONS_MANAGER_H_
+#define _OPTIONS_MANAGER_H_
 //----------------------------------------------------------------------------
 #include "c_base/types.h"
 #include <vector>

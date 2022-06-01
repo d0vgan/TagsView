@@ -208,7 +208,7 @@ namespace TagsCommon
             { _T("Passwd"),          { _T("passwd") } },
             { _T("Pascal"),          { _T(".p"), _T(".pas") } },
             { _T("Perl"),            { _T(".pl"), _T(".pm"), _T(".ph"), _T(".plx"), _T(".perl") } },
-            { _T("Perl6"),           { _T(".p6"), _T(".pm6"), _T(".pm"), _T(".pl6") } },
+            { _T("Perl6"),           { _T(".p6"), _T(".pm6"), _T(".pm"), _T(".pl6"), _T(".t6"), _T(".raku"), _T(".rakumod"), _T(".rakutest") } },
             { _T("PHP"),             { _T(".php"), _T(".php3"), _T(".php4"), _T(".php5"), _T(".php7"), _T(".phtml") } },
             { _T("Pod"),             { _T(".pod") } },
             { _T("PowerShell"),      { _T(".ps1"), _T(".psm1") } },

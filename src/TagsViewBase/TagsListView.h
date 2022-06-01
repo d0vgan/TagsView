@@ -1,6 +1,7 @@
 #ifndef _TAGS_LIST_VIEW_H_
 #define _TAGS_LIST_VIEW_H_
 //---------------------------------------------------------------------------
+#include "win32++/include/wxx_setup.h"
 #include "win32++/include/wxx_listview.h"
 #include "TagsCommon.h"
 #include "TagsDlgChild.h"

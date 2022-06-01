@@ -12,7 +12,7 @@ public:
     void SetTagsDlg(CTagsDlg* pDlg) { m_pDlg = pDlg; }
 
 protected:
-    static TagsCommon::t_string getTooltip(const TagsCommon::tTagData* pTagData);
+    static TagsCommon::t_string getTooltip(const TagsCommon::tTagData* pTag);
 
 protected:
     CTagsDlg* m_pDlg;

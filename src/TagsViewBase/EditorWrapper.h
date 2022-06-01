@@ -1,7 +1,6 @@
-#ifndef _tags_editor_wrapper_h_
-#define _tags_editor_wrapper_h_
+#ifndef _TAGS_EDITOR_WRAPPER_H_
+#define _TAGS_EDITOR_WRAPPER_H_
 //---------------------------------------------------------------------------
-#include "TagsDlg.h"
 #include "TagsCommon.h"
 #include <windows.h>
 #include <string>

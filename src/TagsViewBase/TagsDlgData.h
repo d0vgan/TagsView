@@ -10,6 +10,7 @@
 #include "OptionsManager.h"
 #include "TagsCommon.h"
 #include "CTagsResultParser.h"
+#include "EditorWrapper.h"
 
 
 class CTagsDlgData
@@ -76,7 +77,7 @@ class CTagsDlgData
         typedef TagsCommon::tstring_cmp_less tstring_cmp_less;
         typedef CTagsResultParser::file_tags file_tags;
         typedef CTagsResultParser::tags_map tags_map;
-        typedef std::set<t_string, tstring_cmp_less> file_set;
+        typedef IEditorWrapper::file_set file_set;
 
     public:
         CTagsDlgData();
@@ -92,21 +93,22 @@ class CTagsDlgData
         tags_map* GetTags() { return m_tags; }
         void SetTags(tags_map* pTags) { m_tags = pTags; }
         bool IsTagsEmpty() const { return (m_tags == nullptr || m_tags->empty()); }
+        file_tags* GetFileTags(const t_string& filePath); // can return nullptr
 
         void AddTagsToCache(tags_map&& tags);
-        tags_map* GetTagsForFile(const TCHAR* cszFileName); // sets m_tags, can be nullptr
-        void RemoveTagsForFile(const TCHAR* cszFileName);
+        tags_map* GetTagsFromCache(const TCHAR* cszFileName); // sets m_tags, can return nullptr
+        void RemoveTagsFromCache(const TCHAR* cszFileName);
         void RemoveAllTagsFromCache();
-        void PurifyTagsInCache(const file_set& openedFiles);
+        void RemoveOutdatedTagsFromCache(const file_set& openedFiles);
 
-        std::vector<tags_map::iterator> GetTagsMapItrsByFilePath(const t_string& filePath);
-        tTagData* GetTagByNameAndScope(const t_string& filePath, const t_string& tagName, const t_string& tagScope);
-        file_tags::iterator GetTagByLine(file_tags& fileTags, const int line);
-        file_tags::iterator FindTagByLine(file_tags& fileTags, const int line);
+        tTagData* FindTagByNameAndScope(const t_string& filePath, const t_string& tagName, const t_string& tagScope); // can return nullptr
+        tTagData* FindTagByLine(file_tags& fileTags, const int line); // can return nullptr
 
     protected:
         std::list<tags_map>::iterator getCachedTagsMapItr(const TCHAR* cszFileName); // call it under m_csTagsMap!
         tags_map* getCachedTagsMap(const TCHAR* cszFileName); // call it under m_csTagsMap!
+        file_tags::iterator getTagByLine(file_tags& fileTags, const int line);
+        std::vector<tags_map::iterator> getTagsMapItrsByFilePath(const t_string& filePath);
 
     protected:
         Win32xx::CCriticalSection m_csTagsMap;

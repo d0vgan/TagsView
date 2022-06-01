@@ -1,6 +1,7 @@
 #ifndef _SETTINGS_DLG_H_
 #define _SETTINGS_DLG_H_
 //---------------------------------------------------------------------------
+#include "win32++/include/wxx_setup.h"
 #include "win32++/include/wxx_dialog.h"
 #include "win32++/include/wxx_stdcontrols.h"
 #include "OptionsManager.h"

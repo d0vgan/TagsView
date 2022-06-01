@@ -2,28 +2,28 @@
 
 using namespace TagsCommon;
 
-t_string CTagsDlgChild::getTooltip(const tTagData* pTagData)
+t_string CTagsDlgChild::getTooltip(const tTagData* pTag)
 {
     t_string s;
 
     s.reserve(200);
-    s += pTagData->tagPattern;
+    s += pTag->tagPattern;
     s += _T("\nscope: ");
-    if ( !pTagData->tagScope.empty() )
-        s += pTagData->tagScope;
+    if ( !pTag->tagScope.empty() )
+        s += pTag->tagScope;
     else
         s += _T("(global)");
     s += _T("\ntype: ");
-    s += pTagData->tagType;
+    s += pTag->tagType;
 
-    if ( pTagData->hasFilePath() )
+    if ( pTag->hasFilePath() )
     {
         TCHAR szNum[20];
 
         s += _T("\nfile: ");
-        s += getFileName(pTagData);
+        s += getFileName(pTag);
         s += _T(':');
-        ::wsprintf(szNum, _T("%d"), pTagData->line);
+        ::wsprintf(szNum, _T("%d"), pTag->line);
         s += szNum;
     }
 

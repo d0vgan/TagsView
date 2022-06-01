@@ -26,10 +26,10 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
                 GetItem(tvi);
 
-                const tTagData* pTagData = (const tTagData *) tvi.lParam;
-                if ( pTagData )
+                const tTagData* pTag = (const tTagData *) tvi.lParam;
+                if ( pTag )
                 {
-                    m_pDlg->PostMessage(CTagsDlg::WM_TAGDBLCLICKED, 0, (LPARAM) pTagData);
+                    m_pDlg->PostMessage(CTagsDlg::WM_TAGDBLCLICKED, 0, (LPARAM) pTag);
                 }
 
                 if ( (uMsg != WM_LBUTTONDBLCLK) || !m_pDlg->GetOptions().getBool(CTagsDlgData::OPT_VIEW_DBLCLICKTREE) )
@@ -69,10 +69,10 @@ LRESULT CTagsTreeView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                             LPNMTTDISPINFO lpnmdi = (LPNMTTDISPINFO) lParam;
                             SendMessage(lpnmdi->hdr.hwndFrom, TTM_SETMAXTIPWIDTH, 0, 600);
 
-                            const tTagData* pTagData = (const tTagData *) GetItemData(hItem);
-                            if ( pTagData )
+                            const tTagData* pTag = (const tTagData *) GetItemData(hItem);
+                            if ( pTag )
                             {
-                                m_lastTooltipText = getTooltip(pTagData);
+                                m_lastTooltipText = getTooltip(pTag);
                                 lpnmdi->lpszText = const_cast<TCHAR*>(m_lastTooltipText.c_str());
                             }
                             else

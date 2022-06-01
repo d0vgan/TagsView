@@ -32,10 +32,10 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                     SetItemState(iItem, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
                     SetSelectionMark(iItem);
 
-                    const tTagData* pTagData = (const tTagData *) lvi.lParam;
-                    if ( pTagData )
+                    const tTagData* pTag = (const tTagData *) lvi.lParam;
+                    if ( pTag )
                     {
-                        m_pDlg->PostMessage(CTagsDlg::WM_TAGDBLCLICKED, 0, (LPARAM) pTagData);
+                        m_pDlg->PostMessage(CTagsDlg::WM_TAGDBLCLICKED, 0, (LPARAM) pTag);
 
                         LRESULT lResult = 0;
                         if ( uMsg == WM_LBUTTONDBLCLK )
@@ -78,10 +78,10 @@ LRESULT CTagsListView::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                             LPNMTTDISPINFO lpnmdi = (LPNMTTDISPINFO) lParam;
                             SendMessage(lpnmdi->hdr.hwndFrom, TTM_SETMAXTIPWIDTH, 0, 600);
 
-                            const tTagData* pTagData = (const tTagData *) GetItemData(iItem);
-                            if ( pTagData )
+                            const tTagData* pTag = (const tTagData *) GetItemData(iItem);
+                            if ( pTag )
                             {
-                                m_lastTooltipText = getTooltip(pTagData);
+                                m_lastTooltipText = getTooltip(pTag);
                                 lpnmdi->lpszText = const_cast<TCHAR*>(m_lastTooltipText.c_str());
                             }
                             else

@@ -315,7 +315,7 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
 {
     CConsoleOutputRedirector cor;
     CProcess proc;
-    tCTagsThreadParam* tt = (tCTagsThreadParam *) lpParam;
+    std::unique_ptr<tCTagsThreadParam> tt(reinterpret_cast<tCTagsThreadParam *>(lpParam));
     CTagsDlg* pDlg = tt->pDlg;
     bool bTagsAdded = false;
 
@@ -374,9 +374,9 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
                 if ( pEdWr && (pEdWr->ewGetFilePathName() == tt->source_file_name) )
                 {
                     if ( tt->temp_output_file.empty() )
-                        pDlg->OnAddTags( cor.GetOutputString().c_str(), tt );
+                        pDlg->OnAddTags( cor.GetOutputString().c_str(), tt.get() );
                     else
-                        pDlg->OnAddTags( pTempTags.get(), tt );
+                        pDlg->OnAddTags( pTempTags.get(), tt.get() );
 
                     bTagsAdded = true;
                 }
@@ -412,7 +412,6 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
         pDlg->removeCTagsThreadForFile(tt->source_file_name);
         ::InterlockedDecrement(&pDlg->m_nTagsThreadCount);
     }
-    delete tt;
 
     return 0;
 }
@@ -519,6 +518,13 @@ void CTagsDlg::OnAddTags(const char* s, const tCTagsThreadParam* tt)
             tt->temp_input_file.empty() ? t_string() : tt->source_file_name
         ) 
     );
+
+    if ( tags.find(tt->source_file_name) == tags.end() )
+    {
+        // No tags found in the source_file_name itself.
+        // Anyway, let's have this file in the cache to avoid parsing it again and again.
+        tags[tt->source_file_name] = file_tags();
+    }
 
     m_Data.AddTagsToCache(std::move(tags));
 
@@ -945,7 +951,7 @@ bool CTagsDlg::GoToTag(const t_string& filePath, const TCHAR* cszTagName, const 
 {
     if ( cszTagName && cszTagName[0] && !m_Data.IsTagsEmpty() )
     {
-        tTagData* pTag = m_Data.GetTagByNameAndScope(filePath, cszTagName, cszTagScope);
+        tTagData* pTag = m_Data.FindTagByNameAndScope(filePath, cszTagName, cszTagScope);
         if ( pTag )
         {
         }
@@ -963,11 +969,12 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
         return;
     }
 
-    tags_map* prev_tags = m_Data.GetTags();
+    const tags_map* prev_tags = m_Data.GetTags();
+    const tags_map* curr_tags = m_Data.GetTagsFromCache(cszFileName);
 
-    if ( m_Data.GetTagsForFile(cszFileName) && !bReparsePhysicalFile )
+    if ( curr_tags && !bReparsePhysicalFile )
     {
-        if ( m_Data.GetTags() != prev_tags )
+        if ( curr_tags != prev_tags )
         {
             ClearItems(true);
             ::SendNotifyMessage( this->GetHwnd(), WM_UPDATETAGSVIEW, 0, 0 );
@@ -1010,9 +1017,9 @@ void CTagsDlg::ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFi
     if ( !addCTagsThreadForFile(cszFileName) )
         return;
 
-    if ( m_Data.GetTags() )
+    if ( curr_tags )
     {
-        m_Data.RemoveTagsForFile(cszFileName);
+        m_Data.RemoveTagsFromCache(cszFileName);
     }
 
     t_string ctagsOptPath = m_ctagsExeFilePath;
@@ -1289,37 +1296,17 @@ void CTagsDlg::UpdateCurrentItem()
             int line = m_pEdWr->ewGetLineFromPos(selStart) + 1; // 1-based line
 
             const t_string filePath = m_pEdWr->ewGetFilePathName();
-            auto fileItr = m_Data.GetTags()->find(filePath);
-            if ( fileItr == m_Data.GetTags()->end() )
-            {
+            file_tags* pFileTags = m_Data.GetFileTags(filePath);
+            if ( !pFileTags )
                 return;
-            }
 
-            file_tags& fileTags = fileItr->second;
-            file_tags::const_iterator itr = m_Data.FindTagByLine(fileTags, line);
-            if ( itr == fileTags.end() )
-            {
-                if ( itr != fileTags.begin() )
-                {
-                    --itr;
-                    if ( line < (*itr)->line )
-                    {
-                        auto itrBegin = fileTags.begin();
-                        int diff_last = (*itr)->line - line;
-                        int diff_first = (*itrBegin)->line - line;
-                        if ( diff_first < 0 )
-                            diff_first = -diff_first;
-                        if ( diff_first < diff_last )
-                            itr = itrBegin;
-                    }
-                }
-                else
-                    return;
-            }
+            const tTagData* pTag = m_Data.FindTagByLine(*pFileTags, line);
+            if ( !pTag )
+                return;
 
             if ( m_viewMode == CTagsDlgData::TVM_TREE )
             {
-                HTREEITEM hItem = (HTREEITEM) (*itr)->data.p;
+                HTREEITEM hItem = (HTREEITEM) pTag->data.p;
                 if ( hItem )
                 {
                     CThreadLock lock(m_csTagsItemsUI);
@@ -1333,7 +1320,7 @@ void CTagsDlg::UpdateCurrentItem()
             }
             else
             {
-                int iItem = (*itr)->data.i;
+                int iItem = pTag->data.i;
                 if ( iItem >= 0 )
                 {
                     CThreadLock lock(m_csTagsItemsUI);
@@ -1554,7 +1541,7 @@ void CTagsDlg::PurifyCachedTags()
     }
 
     IEditorWrapper::file_set openedFiles = m_pEdWr->ewGetOpenedFilePaths();
-    m_Data.PurifyTagsInCache(openedFiles);
+    m_Data.RemoveOutdatedTagsFromCache(openedFiles);
 
     if ( openedFiles.empty() )
     {
@@ -1723,13 +1710,13 @@ void CTagsDlg::OnFileClosed()
     PurifyCachedTags();
 }
 
-void CTagsDlg::OnTagDblClicked(const tTagData* pTagData)
+void CTagsDlg::OnTagDblClicked(const tTagData* pTag)
 {
-    if ( pTagData && m_pEdWr )
+    if ( pTag && m_pEdWr )
     {
-        if ( pTagData->hasFilePath() )
+        if ( pTag->hasFilePath() )
         {
-            const t_string& filePath = *pTagData->pFilePath;
+            const t_string& filePath = *pTag->pFilePath;
             t_string currFilePath = m_pEdWr->ewGetFilePathName();
             if ( lstrcmpi(filePath.c_str(), currFilePath.c_str()) != 0 )
             {
@@ -1738,7 +1725,7 @@ void CTagsDlg::OnTagDblClicked(const tTagData* pTagData)
             }
         }
 
-        const int line = pTagData->line;
+        const int line = pTag->line;
         if ( line >= 0 )
         {
             m_isUpdatingSelToItem = true;
@@ -2122,7 +2109,7 @@ void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
                         // adding a scope item
                         t_string::size_type nPos = scopeSep.empty() ? t_string::npos : tagScope.rfind(scopeSep);
                         tagScopeName = (nPos == t_string::npos) ? tagScope : tagScope.substr(nPos + scopeSep.length());
-                        tTagData* pScopeTag = m_Data.GetTagByNameAndScope(tagsByFile.filePath, tagScopeName, (nPos == t_string::npos) ? t_string() : tagScope.substr(0, nPos));
+                        tTagData* pScopeTag = m_Data.FindTagByNameAndScope(tagsByFile.filePath, tagScopeName, (nPos == t_string::npos) ? t_string() : tagScope.substr(0, nPos));
                         hScopeItem = addTreeViewItem(hScopeItem, tagScopeName, pScopeTag);
                         scopeMap[tagScope] = hScopeItem;
 
@@ -2208,7 +2195,7 @@ void CTagsDlg::addFileTagsToTV(tTagsByFile& tagsByFile)
                     // adding a scope item
                     t_string::size_type nPos = scopeSep.empty() ? t_string::npos : pTag->tagScope.rfind(scopeSep);
                     tagScopeName = (nPos == t_string::npos) ? pTag->tagScope : pTag->tagScope.substr(nPos + scopeSep.length());
-                    tTagData* pScopeTag = m_Data.GetTagByNameAndScope(tagsByFile.filePath, tagScopeName, (nPos == t_string::npos) ? t_string() : pTag->tagScope.substr(0, nPos));
+                    tTagData* pScopeTag = m_Data.FindTagByNameAndScope(tagsByFile.filePath, tagScopeName, (nPos == t_string::npos) ? t_string() : pTag->tagScope.substr(0, nPos));
                     hScopeItem = addTreeViewItem(hFileItem, pTag->tagScope, pScopeTag);
                     scopeMap[pTag->tagScope] = hScopeItem;
 

@@ -1,6 +1,7 @@
 #ifndef _TAGS_DLG_H_
 #define _TAGS_DLG_H_
 //---------------------------------------------------------------------------
+#include "win32++/include/wxx_setup.h"
 #include "win32++/include/wxx_dialog.h"
 #include "win32++/include/wxx_toolbar.h"
 #include "win32++/include/wxx_controls.h"
@@ -104,6 +105,8 @@ class CTagsDlg : public CDialog
                 EndDialog(0);
         }
 
+        COptionsManager& GetOptions() { return m_Data.GetOptions(); }
+
         // MUST be called manually to read the options
         void  ReadOptions(COptionsReaderWriter* optRdWr)
         {
@@ -166,8 +169,6 @@ class CTagsDlg : public CDialog
             return CTagsDlgData::TSM_LINE;
         }
 
-        COptionsManager& GetOptions() { return m_Data.GetOptions(); }
-
         void ApplyColors();
         void ClearItems(bool bDelayedRedraw = false);
         void ClearCachedTags();
@@ -185,7 +186,7 @@ class CTagsDlg : public CDialog
         void OnListCopyAllItemsToClipboard();
         void OnShowSettings();
         void OnSettingsChanged();
-        void OnTagDblClicked(const tTagData* pTagData);
+        void OnTagDblClicked(const tTagData* pTag);
 
     protected:
         virtual INT_PTR DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;

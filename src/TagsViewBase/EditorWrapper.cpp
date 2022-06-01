@@ -1,3 +1,4 @@
+#include "TagsDlg.h"
 #include "EditorWrapper.h"
 
 CEditorWrapper::CEditorWrapper(CTagsDlg* pDlg) : m_pDlg(pDlg), m_hMainWnd(NULL)

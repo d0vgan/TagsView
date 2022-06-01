@@ -60,6 +60,17 @@ void CTagsDlgData::InitOptions()
     m_opt.AddInt(OPT_DEBUG_DELETETEMPOUTPUTFILE, cszDebug, _T("DeleteTempOutputFiles"), DTF_ALWAYSDELETE);
 }
 
+CTagsDlgData::file_tags* CTagsDlgData::GetFileTags(const t_string& filePath)
+{
+    if ( m_tags )
+    {
+        auto fileItr = m_tags->find(filePath);
+        if ( fileItr != m_tags->end() )
+            return &fileItr->second;
+    }
+    return nullptr;
+}
+
 void CTagsDlgData::AddTagsToCache(tags_map&& tags)
 {
     CThreadLock lock(m_csTagsMap);
@@ -101,7 +112,7 @@ void CTagsDlgData::AddTagsToCache(tags_map&& tags)
     }
 }
 
-CTagsDlgData::tags_map* CTagsDlgData::GetTagsForFile(const TCHAR* cszFileName)
+CTagsDlgData::tags_map* CTagsDlgData::GetTagsFromCache(const TCHAR* cszFileName)
 {
     CThreadLock lock(m_csTagsMap);
 
@@ -109,7 +120,7 @@ CTagsDlgData::tags_map* CTagsDlgData::GetTagsForFile(const TCHAR* cszFileName)
     return m_tags;
 }
 
-void CTagsDlgData::RemoveTagsForFile(const TCHAR* cszFileName)
+void CTagsDlgData::RemoveTagsFromCache(const TCHAR* cszFileName)
 {
     CThreadLock lock(m_csTagsMap);
 
@@ -126,7 +137,7 @@ void CTagsDlgData::RemoveAllTagsFromCache()
     m_tags = nullptr;
 }
 
-void CTagsDlgData::PurifyTagsInCache(const file_set& openedFiles)
+void CTagsDlgData::RemoveOutdatedTagsFromCache(const file_set& openedFiles)
 {
     std::list<std::list<tags_map>::const_iterator> itemsToDelete;
 
@@ -171,7 +182,7 @@ CTagsDlgData::tags_map* CTagsDlgData::getCachedTagsMap(const TCHAR* cszFileName)
     return ( (itrTags != m_cachedTags.end()) ? &(*itrTags) : nullptr );
 }
 
-std::vector<CTagsDlgData::tags_map::iterator> CTagsDlgData::GetTagsMapItrsByFilePath(const t_string& filePath)
+std::vector<CTagsDlgData::tags_map::iterator> CTagsDlgData::getTagsMapItrsByFilePath(const t_string& filePath)
 {
     if ( m_tags )
     {
@@ -192,11 +203,11 @@ std::vector<CTagsDlgData::tags_map::iterator> CTagsDlgData::GetTagsMapItrsByFile
     return std::vector<tags_map::iterator>();
 }
 
-CTagsDlgData::tTagData* CTagsDlgData::GetTagByNameAndScope(const t_string& filePath, const t_string& tagName, const t_string& tagScope)
+CTagsDlgData::tTagData* CTagsDlgData::FindTagByNameAndScope(const t_string& filePath, const t_string& tagName, const t_string& tagScope)
 {
     if ( m_tags )
     {
-        std::vector<tags_map::iterator> vTagsMapItr = GetTagsMapItrsByFilePath(filePath);
+        std::vector<tags_map::iterator> vTagsMapItr = getTagsMapItrsByFilePath(filePath);
         for ( tags_map::iterator itrTagsMap : vTagsMapItr )
         {
             file_tags& fileTags = itrTagsMap->second;
@@ -214,7 +225,7 @@ CTagsDlgData::tTagData* CTagsDlgData::GetTagByNameAndScope(const t_string& fileP
     return nullptr;
 }
 
-CTagsDlgData::file_tags::iterator CTagsDlgData::GetTagByLine(file_tags& fileTags, const int line)
+CTagsDlgData::file_tags::iterator CTagsDlgData::getTagByLine(file_tags& fileTags, const int line)
 {
     file_tags::iterator itr = std::upper_bound(
         fileTags.begin(),
@@ -254,9 +265,9 @@ CTagsDlgData::file_tags::iterator CTagsDlgData::GetTagByLine(file_tags& fileTags
     return itr;
 }
 
-CTagsDlgData::file_tags::iterator CTagsDlgData::FindTagByLine(file_tags& fileTags, const int line)
+CTagsDlgData::tTagData* CTagsDlgData::FindTagByLine(file_tags& fileTags, const int line)
 {
-    file_tags::iterator itr = GetTagByLine(fileTags, line);
+    file_tags::iterator itr = getTagByLine(fileTags, line);
 
     if ( itr != fileTags.end() )
     {
@@ -274,7 +285,26 @@ CTagsDlgData::file_tags::iterator CTagsDlgData::FindTagByLine(file_tags& fileTag
             if ( (*itr2)->tagScope.empty() )
                 break;
         }
+
+        return itr->get();
     }
 
-    return itr;
+    if ( itr != fileTags.begin() )
+    {
+        --itr;
+        if ( line < (*itr)->line )
+        {
+            auto itrBegin = fileTags.begin();
+            int diff_last = (*itr)->line - line;
+            int diff_first = (*itrBegin)->line - line;
+            if ( diff_first < 0 )
+                diff_first = -diff_first;
+            if ( diff_first < diff_last )
+                itr = itrBegin;
+        }
+
+        return itr->get();
+    }
+
+    return nullptr;
 }

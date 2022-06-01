@@ -1,6 +1,7 @@
 #ifndef _TAGS_FILTER_EDIT_H_
 #define _TAGS_FILTER_EDIT_H_
 //---------------------------------------------------------------------------
+#include "win32++/include/wxx_setup.h"
 #include "win32++/include/wxx_wincore.h"
 #include "TagsCommon.h"
 #include "TagsDlgChild.h"

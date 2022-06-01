@@ -1,8 +1,8 @@
 #ifndef _PLUGIN_H_
 #define _PLUGIN_H_
 //---------------------------------------------------------------------------
-#include "../TagsViewBase/EditorWrapper.h"
 #include "../TagsViewBase/TagsDlg.h"
+#include "../TagsViewBase/EditorWrapper.h"
 #include <windows.h>
 #include "PluginInterface.h"
 #include "Notepad_plus_msgs.h"
