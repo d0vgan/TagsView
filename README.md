@@ -10,3 +10,6 @@ TagsView uses Win32++ to deal with Win API.
 The Win32++ project is here:  
 https://sourceforge.net/projects/win32-framework/  
   
+To support TagsView development:  
+  
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=7D9NG9FZQWLHW)
