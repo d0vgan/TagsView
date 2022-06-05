@@ -7,6 +7,10 @@
 #include <memory>
 #include <algorithm>
 
+#ifdef _AKEL_TAGSVIEW
+#include "../AkelTags/AkelDLL.h"
+#endif
+
 using namespace TagsCommon;
 
 namespace
@@ -483,8 +487,14 @@ INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             break;
 
         case WM_INITDIALOG:
-            return OnInitDialog();
+            OnInitDialog();
+            break;
     }
+
+    onMessage(uMsg, wParam, lParam);
+
+    if ( uMsg == WM_INITDIALOG )
+        return 1;
 
     return DialogProcDefault(uMsg, wParam, lParam);
 }
@@ -565,6 +575,7 @@ BOOL CTagsDlg::OnCommand(WPARAM wParam, LPARAM lParam)
             break;
 
         case IDM_CLOSE:
+        case IDC_BT_CLOSE:
             this->PostMessage(WM_CLOSETAGSVIEW);
             break;
 
@@ -693,15 +704,35 @@ BOOL CTagsDlg::OnInitDialog()
     m_lvTags.SetTagsDlg(this);
     m_tvTags.SetTagsDlg(this);
 
+#ifdef _AKEL_TAGSVIEW
+    m_stTitle.Attach( ::GetDlgItem(GetHwnd(), IDC_ST_TITLE) );
+    m_btClose.Attach( ::GetDlgItem(GetHwnd(), IDC_BT_CLOSE) );
+
+    BUTTONDRAW bd;
+    ::ZeroMemory(&bd, sizeof(BUTTONDRAW));
+    bd.dwFlags = BIF_CROSS | BIF_ETCHED;
+    SendMessage( m_pEdWr->ewGetMainHwnd(), AKD_SETBUTTONDRAW, (WPARAM) m_btClose.GetHwnd(), (LPARAM) &bd );
+#endif
+
     m_edFilter.Attach( ::GetDlgItem(GetHwnd(), IDC_ED_FILTER) );
     m_lvTags.Attach( ::GetDlgItem(GetHwnd(), IDC_LV_TAGS) );
     m_tvTags.Attach( ::GetDlgItem(GetHwnd(), IDC_TV_TAGS) );
 
+    int y = 1;
+#ifdef _AKEL_TAGSVIEW
+    y += (m_stTitle.GetWindowRect().Height() + 2);
+#endif
+
+    DWORD dwTbStyle = /*WS_TABSTOP | */ WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS;
+#ifdef _AKEL_TAGSVIEW
+    dwTbStyle |= (CCS_NOPARENTALIGN | CCS_NOMOVEY);
+#endif
+
     m_tbButtons.CreateEx(
         0, //WS_EX_CLIENTEDGE | WS_EX_WINDOWEDGE,
         TOOLBARCLASSNAME, _T(""),
-        /*WS_TABSTOP | */ WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS,
-        1, 1, 0, 0, GetHwnd(), NULL);
+        dwTbStyle,
+        1, y, 0, 0, GetHwnd(), NULL);
 
     const int nTbButtons = 8;
     const int nTbSeparators = 4;
@@ -838,15 +869,16 @@ void CTagsDlg::OnSize(bool bInitial )
     const int left = 2;
     int top = 1;
 
-/*#ifdef _AKEL_TAGSVIEW
-    HWND hStCaption = GetDlgItem(IDC_ST_CAPTION);
-    if ( hStCaption )
-    {
-        ::GetWindowRect(hStCaption, &r);
-        ::MoveWindow(hStCaption, left, 0, width - 2*left, r.Height(), TRUE);
-        top = r.Height() + 1;
-    }
-#endif*/
+#ifdef _AKEL_TAGSVIEW
+    // AkelTags: "x" button
+    r = m_btClose.GetWindowRect();
+    ::MoveWindow( m_btClose, width - r.Width() - left, top, r.Width(), r.Height(), TRUE );
+
+    // AkelTags: static title
+    CRect rcTitle = m_stTitle.GetWindowRect();
+    ::MoveWindow( m_stTitle, left, top, width - r.Width() - 3*left, rcTitle.Height(), TRUE );
+    top += (rcTitle.Height() + 2);
+#endif
 
     // toolbar
     r = m_tbButtons.GetWindowRect();

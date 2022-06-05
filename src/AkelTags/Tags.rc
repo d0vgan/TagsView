@@ -22,22 +22,23 @@ IDB_TOOLBAR        BITMAP         "..\\TagsViewBase\\res\\TagsView_Toolbar.bmp"
 //
 // Dialog resources
 //
-IDD_MAIN DIALOG 0, 0, 192, 199
+IDD_MAIN DIALOG 0, 0, 192, 211
 STYLE DS_SETFONT | WS_CHILDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS
 FONT 8, "Ms Shell Dlg"
-{
-//    LTEXT           "TagsView", IDC_ST_CAPTION, 2, 0, 188, 13, SS_LEFT, WS_EX_CLIENTEDGE
-    EDITTEXT        IDC_ED_FILTER, 2, 24, 188, 14, ES_AUTOHSCROLL
-    CONTROL         "", IDC_TV_TAGS, WC_TREEVIEW, WS_TABSTOP | WS_BORDER | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_INFOTIP, 2, 44, 188, 154
-    CONTROL         "", IDC_LV_TAGS, WC_LISTVIEW, WS_TABSTOP | WS_BORDER | LVS_ALIGNLEFT | LVS_SHOWSELALWAYS | LVS_SINGLESEL | LVS_REPORT, 2, 44, 188, 154
-}
+BEGIN
+    LTEXT           "TagsView", IDC_ST_TITLE, 2, 1, 174, 10, SS_LEFT | SS_SUNKEN
+    CONTROL         "", IDC_BT_CLOSE, "Button", BS_OWNERDRAW, 178, 1, 11, 10
+    EDITTEXT        IDC_ED_FILTER, 2, 36, 188, 14, ES_AUTOHSCROLL
+    CONTROL         "", IDC_TV_TAGS, WC_TREEVIEW, WS_TABSTOP | WS_BORDER | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_INFOTIP, 2, 56, 188, 154
+    CONTROL         "", IDC_LV_TAGS, WC_LISTVIEW, WS_TABSTOP | WS_BORDER | LVS_ALIGNLEFT | LVS_SHOWSELALWAYS | LVS_SINGLESEL | LVS_REPORT, 2, 56, 188, 154
+END
 
 
 IDD_SETTINGS DIALOG 0, 0, 186, 154
 STYLE DS_3DLOOK | DS_CENTER | DS_MODALFRAME | DS_SHELLFONT | WS_CAPTION | WS_VISIBLE | WS_POPUP | WS_SYSMENU
 CAPTION "TagsView Settings"
 FONT 8, "Ms Shell Dlg"
-{
+BEGIN
     DEFPUSHBUTTON   "OK", IDOK, 35, 134, 50, 14, 0, WS_EX_LEFT
     PUSHBUTTON      "Cancel", IDCANCEL, 95, 134, 50, 14, 0, WS_EX_LEFT
     AUTOCHECKBOX    "Parse on save (auto-parse file when it is saved)", IDC_CH_OPT_PARSEONSAVE, 5, 10, 175, 8, 0, WS_EX_LEFT
@@ -50,52 +51,52 @@ FONT 8, "Ms Shell Dlg"
     AUTOCHECKBOX    "Scan similar files in a folder", IDC_CH_OPT_SCANFOLDER, 5, 102, 175, 8, 0, WS_EX_LEFT
     // Note: the recursive scanning may generate a tag file of several MB that takes toooooo long to visualize
     //AUTOCHECKBOX    "Scan folders recursively", IDC_CH_OPT_SCANFOLDERRECURSIVELY, 5, 114, 175, 8, 0, WS_EX_LEFT
-}
+END
 
 
 IDR_TAGSVIEW_MENU MENU
-{
+BEGIN
     POPUP "TreePopup1"
-    {
+    BEGIN
         MENUITEM "Copy current item to Clipboard",                  IDM_TREE_COPYITEMTOCLIPBOARD
         MENUITEM "Copy all items to Clipboard",                     IDM_TREE_COPYALLITEMSTOCLIPBOARD
-        MENUITEM ""                                                 -1
+        MENUITEM "",                                                -1
         MENUITEM "Collapse parent node",                            IDM_TREE_COLLAPSEPARENTNODE
         MENUITEM "Collapse all nodes",                              IDM_TREE_COLLAPSEALLNODES
         MENUITEM "Expand all nodes",                                IDM_TREE_EXPANDALLNODES
-        MENUITEM ""                                                 -1
+        MENUITEM "",                                                -1
         MENUITEM "Settings...",                                     IDM_SETTINGS
-    }
+    END
     POPUP "TreePopup2"
-    {
+    BEGIN
         MENUITEM "Copy current item to Clipboard",                  IDM_TREE_COPYITEMTOCLIPBOARD
         MENUITEM "Copy current item and its children to Clipboard", IDM_TREE_COPYITEMANDCHILDRENTOCLIPBOARD
         MENUITEM "Copy all items to Clipboard",                     IDM_TREE_COPYALLITEMSTOCLIPBOARD
-        MENUITEM ""                                                 -1
+        MENUITEM "",                                                -1
         MENUITEM "Collapse child nodes",                            IDM_TREE_COLLAPSECHILDNODES
         MENUITEM "Expand child nodes",                              IDM_TREE_EXPANDCHILDNODES
-        MENUITEM ""                                                 -1
+        MENUITEM "",                                                -1
         MENUITEM "Collapse parent node",                            IDM_TREE_COLLAPSEPARENTNODE
         MENUITEM "Collapse all nodes",                              IDM_TREE_COLLAPSEALLNODES
         MENUITEM "Expand all nodes",                                IDM_TREE_EXPANDALLNODES
-        MENUITEM ""                                                 -1
+        MENUITEM "",                                                -1
         MENUITEM "Settings...",                                     IDM_SETTINGS
-    }
+    END
     POPUP "ListPopup"
-    {
+    BEGIN
         MENUITEM "Copy current item to Clipboard",                  IDM_LIST_COPYITEMTOCLIPBOARD
         MENUITEM "Copy all items to Clipboard",                     IDM_LIST_COPYALLITEMSTOCLIPBOARD
-        MENUITEM ""                                                 -1
+        MENUITEM "",                                                -1
         MENUITEM "Settings...",                                     IDM_SETTINGS
-    }
-}
+    END
+END
 
 
 //
 // String Table resources
 //
 STRINGTABLE
-{
+BEGIN
     IDM_PREVPOS                   "Navigate Backward"
     IDM_NEXTPOS                   "Navigate Forward"
     IDM_SORTLINE                  "Sort by Line"
@@ -104,7 +105,7 @@ STRINGTABLE
     IDM_VIEWTREE                  "View as Tree"
     IDM_PARSE                     "Parse"
     IDM_CLOSE                     "Close"
-}
+END
 
 
 
@@ -116,11 +117,11 @@ STRINGTABLE
     PRODUCTVERSION  PLUGIN_VERSION
     FILEOS          VOS__WINDOWS32
     FILETYPE        VFT_UNKNOWN
-{
+BEGIN
     BLOCK "StringFileInfo"
-    {
+    BEGIN
         BLOCK "040904E4"
-        {
+        BEGIN
             VALUE "FileDescription", PLUGIN_NAME " for AkelPad"
             VALUE "FileVersion", STR(PLUGIN_VERSION)
             VALUE "InternalName", PLUGIN_NAME
@@ -129,10 +130,10 @@ STRINGTABLE
             VALUE "ProductVersion", STR(PLUGIN_VERSION)
             VALUE "LegalCopyright", PLUGIN_COPYRIGHT
             VALUE "Comments", PLUGIN_COMMENTS
-        }
-    }
+        END
+    END
     BLOCK "VarFileInfo"
-    {
+    BEGIN
         VALUE "Translation", 0x0, 1252 // language neutral - multilingual
-    }
-}
+    END
+END

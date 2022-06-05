@@ -210,6 +210,7 @@ class CTagsDlg : public CDialog
         void destroyTooltips();
 
         virtual void initOptions()  { m_Data.InitOptions(); }
+        virtual void onMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) { }
 
         void deleteAllItems(bool bDelayedRedraw);
         int addListViewItem(int nItem, const tTagData* pTag);
@@ -253,6 +254,10 @@ class CTagsDlg : public CDialog
         CCriticalSection m_csTagsItemsUI;
         CCriticalSection m_csCTagsThreads;
         CImageList      m_tbImageList;
+#ifdef _AKEL_TAGSVIEW
+        CWnd            m_stTitle;
+        CWnd            m_btClose;
+#endif
         CToolBar        m_tbButtons;
         CTagsFilterEdit m_edFilter;
         CTagsListView   m_lvTags;

@@ -42,11 +42,26 @@ class CAkelTagsDlg : public CTagsDlg
 {
     public:
         enum eOptions2 {
-            OPT_DOCKRECT = CTagsDlgData::OPT_COUNT
+            OPT_DOCKRECT = CTagsDlgData::OPT_COUNT,
+            OPT_DOCKSIDE
         };
+
+    public:
+        CAkelTagsDlg() : CTagsDlg(), m_pDock(NULL)
+        {
+        }
+
+        void setDock(DOCK* pDock)
+        {
+            m_pDock = pDock;
+        }
 
     protected:
         virtual void initOptions() override;
+        virtual void onMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
+
+    protected:
+        DOCK* m_pDock;
 };
 
 class CTagsViewPlugin : public CWinApp, public CEditorWrapper

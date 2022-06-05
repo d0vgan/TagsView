@@ -21,7 +21,8 @@
 #define IDB_TOOLBAR                             203
 #define IDB_EDITSPY                             204
 #define IDB_CANCEL                              205
-//#define IDC_ST_CAPTION                          1001
+#define IDC_ST_TITLE                            1001
+#define IDC_BT_CLOSE                            1002
 #define IDC_ED_FILTER                           1003
 #define IDC_LV_TAGS                             1007
 #define IDC_TV_TAGS                             1008

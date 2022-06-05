@@ -273,7 +273,28 @@ void CAkelTagsDlg::initOptions()
 
     const TCHAR cszView[]  = _T("View");
 
-    GetOptions().AddData( OPT_DOCKRECT,     cszView,  _T("DockRect"), NULL,  0 );
+    GetOptions().AddData( OPT_DOCKRECT,     cszView,  _T("DockRect"), NULL, 0 );
+    GetOptions().AddInt( OPT_DOCKSIDE,      cszView,  _T("DockSide"), DKS_LEFT );
+}
+
+void CAkelTagsDlg::onMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    // Dialog resize messages
+    switch ( uMsg )
+    {
+        case WM_INITDIALOG:
+        case WM_GETMINMAXINFO:
+        case WM_WINDOWPOSCHANGING:
+        case WM_MOVE:
+        case WM_SIZE:
+        case WM_PAINT:
+            if ( m_pDock )
+            {
+                // Note: this is required for drag-n-drop of the docked dialog!
+                ::GetClientRect(GetHwnd(), &m_pDock->rcDragDrop);
+            }
+            break;
+    }
 }
 
 // CTagsViewPlugin class
@@ -570,6 +591,7 @@ void CTagsViewPlugin::ewCloseTagsView()
     Uninitialize(false);
     GetTagsDlg().ClearItems(true);
     GetTagsDlg().ClearCachedTags();
+    ewDoSetFocus();
 }
 
 void CTagsViewPlugin::ewDoNavigateBackward()
@@ -627,8 +649,10 @@ void CTagsViewPlugin::Initialize(PLUGINDATA* pd)
 
     if ( !m_pDockData )
     {
-        static DOCK dk = { 0 };
-        dk.nSide = DKS_LEFT;
+        DOCK dk;
+
+        ::ZeroMemory(&dk, sizeof(DOCK));
+        dk.nSide = m_tagsDlg.GetOptions().getInt(CAkelTagsDlg::OPT_DOCKSIDE);
         dk.dwFlags = DKF_DRAGDROP | DKF_NODROPTOP | DKF_NODROPBOTTOM | DKF_HIDDEN;
 
         int nsize = 0;
@@ -639,6 +663,7 @@ void CTagsViewPlugin::Initialize(PLUGINDATA* pd)
         }
 
         m_pDockData = (DOCK *) ::SendMessage( m_hMainWnd, AKD_DOCK, DK_ADD, (LPARAM) &dk );
+        m_tagsDlg.setDock(m_pDockData);
     }
 
     // SubClass main window
@@ -669,6 +694,7 @@ void CTagsViewPlugin::Uninitialize(bool bDestroyTagsDlg)
         if ( m_pDockData )
         {
             m_tagsDlg.GetOptions().setData(CAkelTagsDlg::OPT_DOCKRECT, &m_pDockData->rcSize, sizeof(RECT));
+            m_tagsDlg.GetOptions().setInt(CAkelTagsDlg::OPT_DOCKSIDE, m_pDockData->nSide);
         }
 
         m_tagsDlg.SaveOptions();
