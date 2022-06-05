@@ -486,6 +486,19 @@ INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             OnSize();
             break;
 
+        case WM_SHOWWINDOW:
+            if ( wParam ) // Showing the window
+            {
+                INT_PTR nResult = DialogProcDefault(uMsg, wParam, lParam);
+                if ( m_pEdWr )
+                {
+                    t_string filePath = m_pEdWr->ewGetFilePathName();
+                    ParseFile( filePath.c_str(), false );
+                }
+                return nResult;
+            }
+            break;
+
         case WM_INITDIALOG:
             OnInitDialog();
             break;
