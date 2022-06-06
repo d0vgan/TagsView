@@ -422,6 +422,9 @@ DWORD WINAPI CTagsDlg::CTagsThreadProc(LPVOID lpParam)
 
 INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    INT_PTR nResult = 0;
+    bool hasResult = false;
+
     switch ( uMsg )
     {
         case WM_CLEARCACHEDTAGS:
@@ -478,7 +481,8 @@ INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         case WM_CTLCOLOREDIT:
             if ( GetOptions().getBool(CTagsDlgData::OPT_COLORS_USEEDITORCOLORS) )
             {
-                return OnCtlColorEdit(wParam, lParam);
+                nResult = OnCtlColorEdit(wParam, lParam);
+                hasResult = true;
             }
             break;
 
@@ -489,25 +493,26 @@ INT_PTR CTagsDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         case WM_SHOWWINDOW:
             if ( wParam ) // Showing the window
             {
-                INT_PTR nResult = DialogProcDefault(uMsg, wParam, lParam);
+                nResult = DialogProcDefault(uMsg, wParam, lParam);
+                hasResult = true;
                 if ( m_pEdWr )
                 {
                     t_string filePath = m_pEdWr->ewGetFilePathName();
                     ParseFile( filePath.c_str(), false );
                 }
-                return nResult;
             }
             break;
 
         case WM_INITDIALOG:
-            OnInitDialog();
+            nResult = OnInitDialog();
+            hasResult = true;
             break;
     }
 
     onMessage(uMsg, wParam, lParam);
 
-    if ( uMsg == WM_INITDIALOG )
-        return 1;
+    if ( hasResult )
+        return nResult;
 
     return DialogProcDefault(uMsg, wParam, lParam);
 }
