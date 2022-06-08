@@ -1,4 +1,6 @@
 TagsView plugin for Notepad++ and AkelPad
+https://github.com/d0vgan/TagsView
+
 
 OVERVIEW
 
