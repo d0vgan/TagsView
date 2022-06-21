@@ -102,6 +102,7 @@ class CTagsDlgData
         void RemoveOutdatedTagsFromCache(const file_set& openedFiles);
 
         tTagData* FindTagByNameAndScope(const t_string& filePath, const t_string& tagName, const t_string& tagScope); // can return nullptr
+        std::vector<tTagData*> FindTagByNameEx(const t_string& filePath, const t_string& tagName);
         tTagData* FindTagByLine(file_tags& fileTags, const int line); // can return nullptr
 
     protected:

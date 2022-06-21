@@ -37,7 +37,7 @@ class IEditorWrapper
         virtual void ewDoSetFocus() = 0;
 
         // set selection in current file
-        virtual void ewDoSetSelection(int selStart, int selEnd) = 0;
+        virtual void ewDoSetSelection(INT_PTR selStart, INT_PTR selEnd) = 0;
 
         // current edit window
         virtual HWND ewGetEditHwnd() const = 0;
@@ -48,13 +48,16 @@ class IEditorWrapper
         // all opened files 
         virtual file_set ewGetOpenedFilePaths() const = 0;
 
-        virtual int ewGetLineFromPos(int pos) const = 0; // 0-based
+        virtual int ewGetLineFromPos(INT_PTR pos) const = 0; // 0-based
 
-        virtual int ewGetPosFromLine(int line) const = 0; // 0-based
+        virtual INT_PTR ewGetPosFromLine(int line) const = 0; // 0-based
 
-        virtual int ewGetSelectionPos(int& selEnd) const = 0;
+        virtual INT_PTR ewGetSelectionPos(INT_PTR& selEnd) const = 0;
 
         //virtual t_string ewGetTextLine(int line) const = 0;
+
+        // returns a full word around the given position
+        virtual t_string ewGetWordAtPos(INT_PTR pos) const = 0;
 
         // true when current file is saved (unmodified)
         virtual bool ewIsFileSaved() const = 0;
@@ -118,7 +121,7 @@ class CEditorWrapper : public IEditorWrapper
 
     protected:
         typedef struct sNavigationPoint {
-            int selPos;
+            INT_PTR selPos;
             t_string hint;
         } tNavigationPoint;
 
@@ -130,7 +133,7 @@ class CEditorWrapper : public IEditorWrapper
                     Clear();
                 }
 
-                void Add(int selPos, const t_string& hint, bool incPos)
+                void Add(INT_PTR selPos, const t_string& hint, bool incPos)
                 {
                     tNavigationPoint np = { selPos, hint };
 
@@ -160,7 +163,7 @@ class CEditorWrapper : public IEditorWrapper
                     m_history.clear();
                 }
 
-                int Backward()
+                INT_PTR Backward()
                 {
                     if ( m_pos > 0 )
                     {
@@ -171,7 +174,7 @@ class CEditorWrapper : public IEditorWrapper
                     return -1;
                 }
 
-                int Forward()
+                INT_PTR Forward()
                 {
                     if ( m_pos + 1 < m_history.size() )
                     {

@@ -205,6 +205,7 @@ std::vector<CTagsDlgData::tags_map::iterator> CTagsDlgData::getTagsMapItrsByFile
 
 CTagsDlgData::tTagData* CTagsDlgData::FindTagByNameAndScope(const t_string& filePath, const t_string& tagName, const t_string& tagScope)
 {
+    // finds inside a file with a name similar to `filePath`
     if ( m_tags )
     {
         std::vector<tags_map::iterator> vTagsMapItr = getTagsMapItrsByFilePath(filePath);
@@ -223,6 +224,63 @@ CTagsDlgData::tTagData* CTagsDlgData::FindTagByNameAndScope(const t_string& file
         }
     }
     return nullptr;
+}
+
+std::vector<CTagsDlgData::tTagData*> CTagsDlgData::FindTagByNameEx(const t_string& filePath, const t_string& tagName)
+{
+    // finds inside all the files
+    std::vector<tTagData*> tags;
+
+    if ( m_tags )
+    {
+        std::vector<tTagData*> tagsInExactFile;
+        std::vector<tTagData*> tagsInSimilarFiles;
+        std::vector<tTagData*> tagsInOtherFiles;
+        t_string filePathNoExt(filePath, 0, getFileExtPos(filePath));
+
+        for ( auto& t : *m_tags )
+        {
+            std::vector<tTagData*>* pTagsInFile = nullptr;
+            if ( lstrcmpi(t.first.c_str(), filePath.c_str()) == 0 )
+            {
+                pTagsInFile = &tagsInExactFile;
+            }
+            else
+            {
+                t_string fpathNoExt(t.first, 0, getFileExtPos(t.first));
+                size_t n = (filePathNoExt.length() < fpathNoExt.length()) ? filePathNoExt.length() : fpathNoExt.length();
+                if ( _tcsnicmp(filePathNoExt.c_str(), fpathNoExt.c_str(), n) == 0 )
+                {
+                    pTagsInFile = &tagsInSimilarFiles;
+                }
+                else
+                {
+                    pTagsInFile = &tagsInOtherFiles;
+                }
+            }
+
+            file_tags& fileTags = t.second;
+            for ( auto& pTag : fileTags )
+            {
+                if ( pTag->tagName == tagName )
+                {
+                    pTag->pFilePath = &t.first;
+                    pTagsInFile->push_back(pTag.get());
+                }
+            }
+        }
+
+        size_t nTagsFound = tagsInExactFile.size() + tagsInSimilarFiles.size() + tagsInOtherFiles.size();
+        if ( nTagsFound != 0 )
+        {
+            tags.reserve(nTagsFound);
+            tags.insert(tags.end(), tagsInExactFile.begin(), tagsInExactFile.end());
+            tags.insert(tags.end(), tagsInSimilarFiles.begin(), tagsInSimilarFiles.end());
+            tags.insert(tags.end(), tagsInOtherFiles.begin(), tagsInOtherFiles.end());
+        }
+    }
+
+    return tags;
 }
 
 CTagsDlgData::file_tags::iterator CTagsDlgData::getTagByLine(file_tags& fileTags, const int line)

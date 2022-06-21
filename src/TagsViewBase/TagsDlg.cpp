@@ -997,12 +997,12 @@ void CTagsDlg::OnParseClicked()
     }
 }
 
-bool CTagsDlg::GoToTag(const t_string& filePath, const TCHAR* cszTagName, const TCHAR* cszTagScope)  // not implemented yet
+bool CTagsDlg::GoToTag(const t_string& filePath, const t_string& tagName)
 {
-    if ( cszTagName && cszTagName[0] && !m_Data.IsTagsEmpty() )
+    if ( !tagName.empty() && !m_Data.IsTagsEmpty() )
     {
-        tTagData* pTag = m_Data.FindTagByNameAndScope(filePath, cszTagName, cszTagScope);
-        if ( pTag )
+        std::vector<tTagData*> tags = m_Data.FindTagByNameEx(filePath, tagName);
+        if ( !tags.empty() )
         {
         }
     }
@@ -1337,7 +1337,7 @@ void CTagsDlg::UpdateCurrentItem()
 {
     if ( m_pEdWr && !m_Data.IsTagsEmpty() && !m_isUpdatingSelToItem )
     {
-        int selEnd, selStart = m_pEdWr->ewGetSelectionPos(selEnd);
+        INT_PTR selEnd, selStart = m_pEdWr->ewGetSelectionPos(selEnd);
 
         if ( m_prevSelStart != selStart )
         {
@@ -1782,7 +1782,7 @@ void CTagsDlg::OnTagDblClicked(const tTagData* pTag)
             m_pEdWr->ewSetNavigationPoint( _T("") );
             //UpdateNavigationButtons();
 
-            int pos = m_pEdWr->ewGetPosFromLine(line - 1);
+            INT_PTR pos = m_pEdWr->ewGetPosFromLine(line - 1);
             m_prevSelStart = pos;
             m_pEdWr->ewDoSetSelection(pos, pos);
 

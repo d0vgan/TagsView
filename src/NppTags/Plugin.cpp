@@ -17,11 +17,13 @@ static TCHAR   szPluginNameDll[128] = _T("TagsView.dll");
 #endif
 
 static void funcTagsView();
+static void funcGoToTag();
 static void funcSettings();
 static void funcAbout();
 
 FuncItem CNppTagsDlg::FUNC_ARRAY[EFI_COUNT] = {
     { _T("TagsView"),    funcTagsView, 0, false, NULL },
+    { _T("Go to tag"),   funcGoToTag,  0, false, NULL },
     { _T("Settings..."), funcSettings, 0, false, NULL },
     { _T(""),            NULL,         0, false, NULL }, // separator
     { _T("About"),       funcAbout,    0, false, NULL }
@@ -61,7 +63,7 @@ void CTagsViewPlugin::ewDoSetFocus()
     ::SetFocus(hSciEdit);
 }
 
-void CTagsViewPlugin::ewDoSetSelection(int selStart, int selEnd)
+void CTagsViewPlugin::ewDoSetSelection(INT_PTR selStart, INT_PTR selEnd)
 {
     const HWND hSciEdit = ewGetEditHwnd();
     int line = (int) ::SendMessage( hSciEdit, SCI_LINEFROMPOSITION, selStart, 0 );
@@ -137,21 +139,21 @@ CTagsViewPlugin::file_set CTagsViewPlugin::ewGetOpenedFilePaths() const
     return openedFiles;
 }
 
-int CTagsViewPlugin::ewGetLineFromPos(int pos) const
+int CTagsViewPlugin::ewGetLineFromPos(INT_PTR pos) const
 {
     return (int) ::SendMessage( ewGetEditHwnd(), SCI_LINEFROMPOSITION, pos, 0 );
 }
 
-int CTagsViewPlugin::ewGetPosFromLine(int line) const
+INT_PTR CTagsViewPlugin::ewGetPosFromLine(int line) const
 {
-    return (int) ::SendMessage( ewGetEditHwnd(), SCI_POSITIONFROMLINE, line, 0 );
+    return (INT_PTR) ::SendMessage( ewGetEditHwnd(), SCI_POSITIONFROMLINE, line, 0 );
 }
 
-int CTagsViewPlugin::ewGetSelectionPos(int& selEnd) const
+INT_PTR CTagsViewPlugin::ewGetSelectionPos(INT_PTR& selEnd) const
 {
     const HWND hSciEdit = ewGetEditHwnd();
-    int selStart = (int) ::SendMessage( hSciEdit, SCI_GETSELECTIONSTART, 0, 0 );
-    selEnd = (int) ::SendMessage( hSciEdit, SCI_GETSELECTIONEND, 0, 0 );
+    INT_PTR selStart = (INT_PTR) ::SendMessage( hSciEdit, SCI_GETSELECTIONSTART, 0, 0 );
+    selEnd = (INT_PTR) ::SendMessage( hSciEdit, SCI_GETSELECTIONEND, 0, 0 );
 
     return selStart;
 }
@@ -161,6 +163,26 @@ CTagsViewPlugin::t_string CTagsViewPlugin::ewGetTextLine(int line) const
 {
 }
 */
+
+CTagsViewPlugin::t_string CTagsViewPlugin::ewGetWordAtPos(INT_PTR pos) const
+{
+    HWND hSci = ewGetEditHwnd();
+
+    Sci_TextRange tr;
+    tr.chrg.cpMin = (Sci_PositionCR) ::SendMessage(hSci, SCI_WORDSTARTPOSITION, pos, 1);
+    tr.chrg.cpMax = (Sci_PositionCR) ::SendMessage(hSci, SCI_WORDENDPOSITION, pos, 1);
+
+    std::vector<char> v;
+    v.reserve(tr.chrg.cpMax - tr.chrg.cpMin + 1);
+    tr.lpstrText = v.data();
+    int len = (int) ::SendMessage(hSci, SCI_GETTEXTRANGE, 0, (LPARAM) &tr);
+    int cp = (int) ::SendMessage(hSci, SCI_GETCODEPAGE, 0, 0);
+    if ( cp == SC_CP_UTF8 )
+        cp = CP_UTF8;
+    else
+        cp = CP_ACP;
+    return t_string(Win32xx::AtoT(v.data(), cp, len).c_str(), size_t(len));
+}
 
 bool CTagsViewPlugin::ewIsFileSaved() const
 {
@@ -428,6 +450,19 @@ void funcTagsView()
     if ( bParseFile && isNppReady )
     {
         thePlugin.GetTagsDlg().ReparseCurrentFile();
+    }
+}
+
+// static func
+void funcGoToTag()
+{
+    if ( thePlugin.GetTagsDlg().GetHwnd() && thePlugin.GetTagsDlg().IsWindowVisible() )
+    {
+        INT_PTR selEnd = 0;
+        INT_PTR selStart = thePlugin.ewGetSelectionPos(selEnd);
+        CTagsViewPlugin::t_string word = thePlugin.ewGetWordAtPos(selStart);
+        CTagsViewPlugin::t_string filePath = thePlugin.ewGetFilePathName();
+        thePlugin.GetTagsDlg().GoToTag(filePath, word);
     }
 }
 

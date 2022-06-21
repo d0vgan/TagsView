@@ -2,6 +2,33 @@
 #include "../TagsViewBase/c_base/HexStr.h"
 
 
+#ifdef _WIN64
+    // types and structs
+    #define CHARRANGE_X CHARRANGE64
+  #ifdef UNICODE
+    #define TEXTRANGE_X TEXTRANGE64W
+  #else
+    #define TEXTRANGE_X TEXTRANGE64A
+  #endif
+    // messages
+    #define EM_EXGETSEL_X EM_EXGETSEL64
+    #define EM_EXSETSEL_X EM_EXSETSEL64
+    #define EM_GETTEXTRANGE_X EM_GETTEXTRANGE64
+#else
+    // types and structs
+    #define CHARRANGE_X CHARRANGE
+  #ifdef UNICODE
+    #define TEXTRANGE_X TEXTRANGEW
+  #else
+    #define TEXTRANGE_X TEXTRANGEA
+  #endif
+    // messages
+    #define EM_EXGETSEL_X EM_EXGETSEL
+    #define EM_EXSETSEL_X EM_EXSETSEL
+    #define EM_GETTEXTRANGE_X EM_GETTEXTRANGE
+#endif
+
+
 // consts
 const TCHAR* cszPluginName = _T("TagsView");
 
@@ -358,9 +385,9 @@ void CTagsViewPlugin::ewDoSetFocus()
     ::SetFocus(hEdit);
 }
 
-void CTagsViewPlugin::ewDoSetSelection(int selStart, int selEnd)
+void CTagsViewPlugin::ewDoSetSelection(INT_PTR selStart, INT_PTR selEnd)
 {
-    CHARRANGE cr;
+    CHARRANGE_X cr;
 
     cr.cpMin = selStart;
     cr.cpMax = selEnd;
@@ -377,13 +404,13 @@ void CTagsViewPlugin::ewDoSetSelection(int selStart, int selEnd)
         selLine = (int) ::SendMessage( hEdit, AEM_GETLINENUMBER, AEGL_LINEFROMRICHOFFSET, cr.cpMin );
         if ( selLine > firstVisLine && selLine < lastVisLine - 1 )
         {
-            ::SendMessage( hEdit, EM_EXSETSEL, 0, (LPARAM) &cr );
+            ::SendMessage( hEdit, EM_EXSETSEL_X, 0, (LPARAM) &cr );
             return;
         }
     }
 
     //::SendMessage( hEdit, WM_SETREDRAW, (WPARAM) FALSE, 0 );
-    ::SendMessage( hEdit, EM_EXSETSEL, 0, (LPARAM) &cr );
+    ::SendMessage( hEdit, EM_EXSETSEL_X, 0, (LPARAM) &cr );
     if ( bAkelEdit )
     {
         AESCROLLTOPOINT stp;
@@ -451,7 +478,7 @@ CTagsViewPlugin::file_set CTagsViewPlugin::ewGetOpenedFilePaths() const
     return openedFiles;
 }
 
-int CTagsViewPlugin::ewGetLineFromPos(int pos) const
+int CTagsViewPlugin::ewGetLineFromPos(INT_PTR pos) const
 {
     HWND hEdit = ewGetEditHwnd();
     int  nLine = (int) ::SendMessage(hEdit, EM_EXLINEFROMCHAR, 0, pos);
@@ -465,7 +492,7 @@ int CTagsViewPlugin::ewGetLineFromPos(int pos) const
     return nLine;
 }
 
-int CTagsViewPlugin::ewGetPosFromLine(int line) const
+INT_PTR CTagsViewPlugin::ewGetPosFromLine(int line) const
 {
     HWND hEdit = ewGetEditHwnd();
 
@@ -475,16 +502,16 @@ int CTagsViewPlugin::ewGetPosFromLine(int line) const
             line = (int) ::SendMessage(hEdit, AEM_GETWRAPLINE, line, 0);
     }
 
-    return (int) ::SendMessage(hEdit, EM_LINEINDEX, line, 0);
+    return (INT_PTR) ::SendMessage(hEdit, EM_LINEINDEX, line, 0);
 }
 
-int CTagsViewPlugin::ewGetSelectionPos(int& selEnd) const
+INT_PTR CTagsViewPlugin::ewGetSelectionPos(INT_PTR& selEnd) const
 {
-    CHARRANGE cr = { 0, 0 };
+    CHARRANGE_X cr = { 0, 0 };
 
-    ::SendMessage( ewGetEditHwnd(), EM_EXGETSEL, 0, (LPARAM) &cr );
+    ::SendMessage( ewGetEditHwnd(), EM_EXGETSEL_X, 0, (LPARAM) &cr );
     selEnd = cr.cpMax;
-    return (int) cr.cpMin;
+    return cr.cpMin;
 }
 
 /*
@@ -492,6 +519,34 @@ CTagsViewPlugin::t_string CTagsViewPlugin::ewGetTextLine(int line) const
 {
 }
 */
+
+CTagsViewPlugin::t_string CTagsViewPlugin::ewGetWordAtPos(INT_PTR pos) const
+{
+    HWND hEdit = ewGetEditHwnd();
+
+    CHARRANGE_X crWord;
+    crWord.cpMin = (INT_PTR) ::SendMessage(hEdit, EM_FINDWORDBREAK, WB_LEFT, pos);
+    crWord.cpMax = (INT_PTR) ::SendMessage(hEdit, EM_FINDWORDBREAK, WB_RIGHTBREAK, pos);
+
+    if ( crWord.cpMax < pos )
+    {
+        // caret is located on word start position i.e. "prev-word |word-to-copy"
+        crWord.cpMin = (INT_PTR) ::SendMessage(hEdit, EM_FINDWORDBREAK, WB_LEFT, pos + 1);
+        crWord.cpMax = (INT_PTR) ::SendMessage(hEdit, EM_FINDWORDBREAK, WB_RIGHTBREAK, crWord.cpMin);
+    }
+
+    size_t len = static_cast<size_t>(crWord.cpMax - crWord.cpMin);
+    std::vector<TCHAR> buf(len + 1);
+
+    TEXTRANGE_X tr;
+    tr.chrg.cpMin = crWord.cpMin;
+    tr.chrg.cpMax = crWord.cpMax;
+    tr.lpstrText = buf.data();
+
+    ::SendMessage( hEdit, EM_GETTEXTRANGE_X, 0, (LPARAM) &tr );
+
+    return t_string(buf.data(), len);
+}
 
 bool CTagsViewPlugin::ewIsFileSaved() const
 {
@@ -855,6 +910,50 @@ extern "C" void __declspec(dllexport) TagsView(PLUGINDATA *pd)
 
     // Stay in memory, and show as active
     pd->nUnload = UD_NONUNLOAD_ACTIVE;
+}
+
+// Plugin extern function
+extern "C" void __declspec(dllexport) GoToTag(PLUGINDATA *pd)
+{
+#ifdef UNICODE
+    pd->dwSupport |= (PDS_NOAUTOLOAD | PDS_NOANSI);
+#else
+    pd->dwSupport |= (PDS_NOAUTOLOAD | PDS_NOUNICODE);
+#endif
+    if ( pd->dwSupport & PDS_GETSUPPORT )
+        return;
+
+#ifdef UNICODE
+    if ( pd->bOldWindows )
+#else
+    if ( !pd->bOldWindows )
+#endif
+    {
+        ::MessageBox(
+            pd->hMainWnd,
+#ifdef UNICODE
+            _T("This version of TagsView does not support Windows 9x/Me"),
+#else
+            _T("This version of TagsView supports only Windows 9x/Me"),
+#endif
+            _T("TagsView plugin"),
+            MB_OK | MB_ICONERROR
+        );
+        pd->nUnload = UD_UNLOAD;
+        return;
+    }
+
+    if ( !thePlugin.bInitialized )
+        return;
+
+    if ( thePlugin.GetTagsDlg().GetHwnd() && thePlugin.GetTagsDlg().IsWindowVisible() )
+    {
+        INT_PTR selEnd = 0;
+        INT_PTR selStart = thePlugin.ewGetSelectionPos(selEnd);
+        CTagsViewPlugin::t_string word = thePlugin.ewGetWordAtPos(selStart);
+        CTagsViewPlugin::t_string filePath = thePlugin.ewGetFilePathName();
+        thePlugin.GetTagsDlg().GoToTag(filePath, word);
+    }
 }
 
 // Plugin extern function

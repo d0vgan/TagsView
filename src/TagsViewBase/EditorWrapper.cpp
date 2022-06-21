@@ -54,12 +54,12 @@ void CEditorWrapper::ewDoNavigateBackward()
     t_navmap::iterator itr = getNavItr( getCurrentFilePathName() );
     if ( itr != m_navMap.end() )
     {
-        int selPos = itr->second.Backward();
+        INT_PTR selPos = itr->second.Backward();
         if ( selPos < 0 )
             return;
 
-        int selEnd;
-        int selStart = ewGetSelectionPos(selEnd);
+        INT_PTR selEnd;
+        INT_PTR selStart = ewGetSelectionPos(selEnd);
         if ( selStart == selPos )
         {
             selPos = itr->second.Backward();
@@ -75,7 +75,7 @@ void CEditorWrapper::ewDoNavigateForward()
     t_navmap::iterator itr = getNavItr( getCurrentFilePathName() );
     if ( itr != m_navMap.end() )
     {
-        int selPos = itr->second.Forward();
+        INT_PTR selPos = itr->second.Forward();
         if ( selPos >= 0 )
         {
             ewDoSetSelection(selPos, selPos);
@@ -178,8 +178,8 @@ void CEditorWrapper::ewSetNavigationPoint(const t_string& hint, bool incPos )
     const t_string filePathName = ewGetFilePathName();
     if ( filePathName == getCurrentFilePathName() )
     {
-        int selEnd;
-        int selStart = ewGetSelectionPos(selEnd);
+        INT_PTR selEnd;
+        INT_PTR selStart = ewGetSelectionPos(selEnd);
 
         t_navmap::iterator itr = getNavItr(filePathName);
         if ( itr != m_navMap.end() )

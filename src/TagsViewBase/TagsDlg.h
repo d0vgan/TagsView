@@ -90,7 +90,7 @@ class CTagsDlg : public CDialog
 
         const CTagsDlgData::eTagsSortMode GetSortMode() const { return m_sortMode; }
         const CTagsDlgData::eTagsViewMode GetViewMode() const { return m_viewMode; }
-        bool  GoToTag(const t_string& filePath, const TCHAR* cszTagName, const TCHAR* cszTagScope); // not implemented yet
+        bool  GoToTag(const t_string& filePath, const t_string& tagName);
         void  ParseFile(const TCHAR* const cszFileName, bool bReparsePhysicalFile);
         void  ReparseCurrentFile();
         void  SetSortMode(CTagsDlgData::eTagsSortMode sortMode);
@@ -273,7 +273,7 @@ class CTagsDlg : public CDialog
         COLORREF        m_crTextColor;
         COLORREF        m_crBkgndColor;
         HBRUSH          m_hBkgndBrush;
-        int             m_prevSelStart;
+        INT_PTR         m_prevSelStart;
         bool            m_isUpdatingSelToItem;
         unsigned int    m_nThreadMsg; // access it under m_csCTagsThreads!
         volatile mutable LONG m_nTagsThreadCount;

@@ -92,7 +92,7 @@ class CTagsViewPlugin : public CWinApp, public CEditorWrapper
         virtual void ewDoSetFocus() override;
 
         // set selection in current file
-        virtual void ewDoSetSelection(int selStart, int selEnd) override;
+        virtual void ewDoSetSelection(INT_PTR selStart, INT_PTR selEnd) override;
 
         // current edit window
         virtual HWND ewGetEditHwnd() const override;
@@ -103,13 +103,16 @@ class CTagsViewPlugin : public CWinApp, public CEditorWrapper
         // all opened files 
         virtual file_set ewGetOpenedFilePaths() const override;
 
-        virtual int ewGetLineFromPos(int pos) const override; // 0-based
+        virtual int ewGetLineFromPos(INT_PTR pos) const override; // 0-based
 
-        virtual int ewGetPosFromLine(int line) const override; // 0-based
+        virtual INT_PTR ewGetPosFromLine(int line) const override; // 0-based
 
-        virtual int ewGetSelectionPos(int& selEnd) const override;
+        virtual INT_PTR ewGetSelectionPos(INT_PTR& selEnd) const override;
 
         //virtual t_string ewGetTextLine(int line) const override;
+
+        // returns a full word around the given position
+        virtual t_string ewGetWordAtPos(INT_PTR pos) const override;
 
         // true when current file is saved (unmodified)
         virtual bool ewIsFileSaved() const override;
