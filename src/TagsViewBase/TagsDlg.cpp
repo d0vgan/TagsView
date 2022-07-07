@@ -721,6 +721,7 @@ BOOL CTagsDlg::OnInitDialog()
     m_edFilter.SetTagsDlg(this);
     m_lvTags.SetTagsDlg(this);
     m_tvTags.SetTagsDlg(this);
+    m_lbPopup.SetTagsDlg(this);
 
 #ifdef _AKEL_TAGSVIEW
     m_stTitle.Attach( ::GetDlgItem(GetHwnd(), IDC_ST_TITLE) );
@@ -1004,6 +1005,43 @@ bool CTagsDlg::GoToTag(const t_string& filePath, const t_string& tagName)
         std::vector<tTagData*> tags = m_Data.FindTagByNameEx(filePath, tagName);
         if ( !tags.empty() )
         {
+            int x = 40;
+            int y = 0;
+            int width = 600;
+            int height = 200;
+
+            // TODO: let's use Show/Hide instead of Create/Destrow
+            //       and let's use MoveWindowEx to set the window position
+            if ( m_lbPopup.GetHwnd() )
+            {
+                m_lbPopup.Destroy();
+            }
+
+            m_lbPopup.CreateEx(
+                WS_EX_TOPMOST | WS_EX_CLIENTEDGE,
+                _T("LISTBOX"),
+                _T(""),
+                WS_CHILD | WS_BORDER | WS_VSCROLL | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED,
+                x,
+                y,
+                width,
+                height,
+                m_pEdWr->ewGetEditHwnd(), // to be able to handle WM_MEASUREITEM
+                NULL,
+                NULL
+            );
+
+            for ( const tTagData* pTag : tags )
+            {
+                int nItem = m_lbPopup.AddString(CTagsDlgChild::getPopupListBoxItem(pTag).c_str());
+                if ( nItem != LB_ERR )
+                {
+                    m_lbPopup.SetItemDataPtr(nItem, (void *) pTag);
+                }
+            }
+
+            m_lbPopup.SetCurSel(0);
+            m_lbPopup.ShowWindow();
         }
     }
 
@@ -1794,6 +1832,82 @@ void CTagsDlg::OnTagDblClicked(const tTagData* pTag)
         m_isUpdatingSelToItem = false;
     }
 }
+
+LRESULT CTagsDlg::ProcessPopupListBoxNotifications(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL* pIsProcessed)
+{
+    MEASUREITEMSTRUCT* pmis;
+    DRAWITEMSTRUCT* pdis;
+
+    switch ( uMsg )
+    {
+        case WM_MEASUREITEM:
+            pmis = (MEASUREITEMSTRUCT *) lParam;
+            if ( pmis->CtlType == ODT_LISTBOX )
+            {
+                pmis->itemHeight *= 2; // 2 lines
+
+                *pIsProcessed = TRUE;
+                return TRUE;
+            }
+            break;
+
+        case WM_DRAWITEM:
+            pdis = (DRAWITEMSTRUCT *) lParam;
+            if ( pdis->CtlType == ODT_LISTBOX && pdis->hwndItem == m_lbPopup.GetHwnd() )
+            {
+                int nItemsCount = m_lbPopup.GetCount();
+                if ( nItemsCount == 0 )
+                    return FALSE;
+
+                int nBkColor;
+                int nTextColor;
+                if ( pdis->itemState & ODS_FOCUS || pdis->itemState & ODS_SELECTED )
+                {
+                    nBkColor = COLOR_HIGHLIGHT;
+                    nTextColor = COLOR_HIGHLIGHTTEXT;
+                }
+                else
+                {
+                    nBkColor = COLOR_WINDOW;
+                    nTextColor = COLOR_WINDOWTEXT;
+                }
+                ::FillRect(pdis->hDC, &pdis->rcItem, ::GetSysColorBrush(nBkColor));
+
+                TCHAR szItemText[2040];
+                szItemText[0] = 0;
+                int nTextLen = m_lbPopup.GetText(pdis->itemID, szItemText);
+                ::SetBkMode(pdis->hDC, TRANSPARENT);
+                ::SetTextColor(pdis->hDC, ::GetSysColor(nTextColor));
+                ::DrawText(pdis->hDC, szItemText, nTextLen, &pdis->rcItem, DT_WORDBREAK | DT_VCENTER);
+
+                if ( nItemsCount != 1 )
+                {
+                    HPEN hPen = ::CreatePen(PS_SOLID, 1, ::GetSysColor(COLOR_BTNFACE));
+                    HPEN hOldPen = (HPEN) ::SelectObject(pdis->hDC, hPen);
+                    if ( pdis->itemID != nItemsCount - 1 )
+                    {
+                        ::MoveToEx(pdis->hDC, pdis->rcItem.left, pdis->rcItem.bottom - 1, NULL);
+                        ::LineTo(pdis->hDC, pdis->rcItem.right, pdis->rcItem.bottom - 1);
+                    }
+                    if ( pdis->itemID != 0 )
+                    {
+                        ::MoveToEx(pdis->hDC, pdis->rcItem.left, pdis->rcItem.top, NULL);
+                        ::LineTo(pdis->hDC, pdis->rcItem.right, pdis->rcItem.top);
+                    }
+                    ::SelectObject(pdis->hDC, hOldPen);
+                    ::DeleteObject(hPen);
+                }
+
+                *pIsProcessed = TRUE;
+                return TRUE;
+            }
+            break;
+    }
+
+    *pIsProcessed = FALSE;
+    return 0;
+}
+
 
 void CTagsDlg::checkCTagsExePath()
 {

@@ -1,5 +1,6 @@
 #include "Plugin.h"
 #include "../TagsViewBase/resource.h"
+#include "../TagsViewBase/TagsPopupListBox.h"
 
 // CTagsViewPlugin class
 //----------------------------------------------------------------------------
@@ -20,6 +21,11 @@ static void funcTagsView();
 static void funcGoToTag();
 static void funcSettings();
 static void funcAbout();
+
+static WNDPROC sciOriginalWndProc1 = NULL;
+static WNDPROC sciOriginalWndProc2 = NULL;
+static LRESULT CALLBACK sciPluginWndProc1(HWND hWnd, UINT uMessage, WPARAM wParam, LPARAM lParam);
+static LRESULT CALLBACK sciPluginWndProc2(HWND hWnd, UINT uMessage, WPARAM wParam, LPARAM lParam);
 
 FuncItem CNppTagsDlg::FUNC_ARRAY[EFI_COUNT] = {
     { _T("TagsView"),    funcTagsView, 0, false, NULL },
@@ -242,10 +248,20 @@ void CTagsViewPlugin::OnNppReady()
     );
 
 #if PLUGIN_WND_PROC
-    nppOriginalWndProc = (WNDPROC) SetWindowLongPtrW( 
+    nppOriginalWndProc = (WNDPROC) ::SetWindowLongPtrW( 
         m_nppData._nppHandle, GWLP_WNDPROC, 
         (LONG_PTR) nppPluginWndProc );
 #endif
+
+    sciOriginalWndProc1 = (WNDPROC) ::SetWindowLongPtr(
+        m_nppData._scintillaMainHandle, GWLP_WNDPROC,
+        (LONG_PTR) sciPluginWndProc1
+    );
+
+    sciOriginalWndProc2 = (WNDPROC) ::SetWindowLongPtr(
+        m_nppData._scintillaSecondHandle, GWLP_WNDPROC,
+        (LONG_PTR) sciPluginWndProc2
+    );
 
     if ( m_tagsDlg.GetHwnd() && m_tagsDlg.IsWindowVisible() )
     {
@@ -262,6 +278,12 @@ void CTagsViewPlugin::OnNppShutdown()
             GWLP_WNDPROC, (LONG_PTR) nppOriginalWndProc);
     }
 #endif
+
+    ::SetWindowLongPtr(m_nppData._scintillaSecondHandle,
+        GWLP_WNDPROC, (LONG_PTR) sciOriginalWndProc2);
+
+    ::SetWindowLongPtr(m_nppData._scintillaMainHandle,
+        GWLP_WNDPROC, (LONG_PTR) sciOriginalWndProc1);
 }
 
 void CTagsViewPlugin::InitOptions()
@@ -628,4 +650,24 @@ extern "C" BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpR
     }
 
     return TRUE;
+}
+
+LRESULT CALLBACK sciPluginWndProc1(HWND hWnd, UINT uMessage, WPARAM wParam, LPARAM lParam)
+{
+    BOOL bIsProcessed = FALSE;
+    LRESULT lResult = thePlugin.GetTagsDlg().ProcessPopupListBoxNotifications(uMessage, wParam, lParam, &bIsProcessed);
+    if ( bIsProcessed )
+        return lResult;
+
+    return ::CallWindowProc(sciOriginalWndProc1, hWnd, uMessage, wParam, lParam);
+}
+
+LRESULT CALLBACK sciPluginWndProc2(HWND hWnd, UINT uMessage, WPARAM wParam, LPARAM lParam)
+{
+    BOOL bIsProcessed = FALSE;
+    LRESULT lResult = thePlugin.GetTagsDlg().ProcessPopupListBoxNotifications(uMessage, wParam, lParam, &bIsProcessed);
+    if ( bIsProcessed )
+        return lResult;
+
+    return ::CallWindowProc(sciOriginalWndProc2, hWnd, uMessage, wParam, lParam);
 }

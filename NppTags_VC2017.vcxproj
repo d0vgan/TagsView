@@ -187,6 +187,7 @@
     <ClCompile Include="src\TagsViewBase\TagsFilterEdit.cpp" />
     <ClCompile Include="src\TagsViewBase\TagsListView.cpp" />
     <ClCompile Include="src\TagsViewBase\TagsTreeView.cpp" />
+    <ClCompile Include="src\TagsViewBase\TagsPopupListBox.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\NppTags\Docking.h" />
@@ -208,6 +209,7 @@
     <ClInclude Include="src\TagsViewBase\TagsFilterEdit.h" />
     <ClInclude Include="src\TagsViewBase\TagsListView.h" />
     <ClInclude Include="src\TagsViewBase\TagsTreeView.h" />
+    <ClInclude Include="src\TagsViewBase\TagsPopupListBox.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\NppTags\Tags.rc" />

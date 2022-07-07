@@ -57,6 +57,9 @@
     <ClCompile Include="src\TagsViewBase\TagsTreeView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\TagsViewBase\TagsPopupListBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\TagsViewBase\ConsoleOutputRedirector.h">
@@ -114,6 +117,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\TagsViewBase\TagsTreeView.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\TagsViewBase\TagsPopupListBox.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

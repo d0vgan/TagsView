@@ -16,6 +16,7 @@
 #include "TagsFilterEdit.h"
 #include "TagsListView.h"
 #include "TagsTreeView.h"
+#include "TagsPopupListBox.h"
 
 using Win32xx::CDialog;
 using Win32xx::CToolBar;
@@ -188,6 +189,8 @@ class CTagsDlg : public CDialog
         void OnSettingsChanged();
         void OnTagDblClicked(const tTagData* pTag);
 
+        LRESULT ProcessPopupListBoxNotifications(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL* pIsProcessed);
+
     protected:
         virtual INT_PTR DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
         virtual void EndDialog(INT_PTR nResult) override;
@@ -246,6 +249,7 @@ class CTagsDlg : public CDialog
         friend class CTagsFilterEdit;
         friend class CTagsListView;
         friend class CTagsTreeView;
+        friend class CTagsPopupListBox;
 
         CTagsDlgData::eTagsViewMode   m_viewMode;
         CTagsDlgData::eTagsSortMode   m_sortMode;
@@ -262,6 +266,7 @@ class CTagsDlg : public CDialog
         CTagsFilterEdit m_edFilter;
         CTagsListView   m_lvTags;
         CTagsTreeView   m_tvTags;
+        CTagsPopupListBox m_lbPopup;
         CToolTip        m_ttHints;
         t_string        m_tagFilter;
         t_string        m_ctagsExeFilePath;
